@@ -37,15 +37,18 @@ hidden_size * 2           = 4096 // размер после конкатенац
 - [src/llama-graph.h](src/llama-graph.h)
 - [src/llama-model.cpp](src/llama-model.cpp)
 - [src/models/qwen3next.cpp](src/models/qwen3next.cpp)
-
-### Опционально — может пригодятся, а может нет
-- [examples/speculative-simple/speculative-simple.cpp](examples/speculative-simple/speculative-simple.cpp)
 - [convert_hf_to_gguf.py](convert_hf_to_gguf.py)
 - [gguf-py/gguf/constants.py](gguf-py/gguf/constants.py)
 
+### Опционально — может пригодятся, а может нет
+- [examples/speculative-simple/speculative-simple.cpp](examples/speculative-simple/speculative-simple.cpp)
+
+
 ---
 
-## Шаг 1. Маппинг тензоров GGUF
+## Шаг 1. Конвертер. Маппинг тензоров GGUF
+
+Сдесь нужно допилить конвертер, что-бы он в gguf добавлял так же MTP тензоры из safetensor модели. 
 
 MTP блок живёт в `blk.48.*`. Маппинг:
 
