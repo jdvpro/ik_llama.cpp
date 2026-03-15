@@ -467,13 +467,26 @@ void llm_load_hparams(
                 ml.get_key(LLM_KV_SSM_TIME_STEP_RANK, hparams.ssm_dt_rank);
                 ml.get_key(LLM_KV_SSM_GROUP_COUNT,    hparams.ssm_n_group);
 
-                // Upstream convention: every 4th layer is full attention, others are recurrent.
-                for (uint32_t i = 0; i < hparams.n_layer; ++i) {
-                    hparams.recurrent_layer_arr[i] = ((i + 1) % 4 != 0);
+                ml.get_key(LLM_KV_NEXTN_PREDICT_LAYERS, hparams.nextn_predict_layers, false);
+                hparams.n_layer_kv_from_start = hparams.n_layer - hparams.nextn_predict_layers;
+
+                // Mark recurrent layers (linear attention); MTP layers use full attention
+                {
+                    uint32_t full_attn_interval = 4;
+                    ml.get_key(LLM_KV_FULL_ATTENTION_INTERVAL, full_attn_interval, false);
+                    const uint32_t n_main = hparams.n_layer - hparams.nextn_predict_layers;
+                    for (uint32_t i = 0; i < hparams.n_layer; ++i) {
+                        if (i >= n_main) {
+                            hparams.recurrent_layer_arr[i] = false; // MTP layers are full attention
+                        } else {
+                            hparams.recurrent_layer_arr[i] = ((i + 1) % full_attn_interval != 0);
+                        }
+                    }
                 }
 
                 switch (hparams.n_layer) {
                     case 48: model.type = e_model::MODEL_80B_A3B; break;
+                    case 49: model.type = e_model::MODEL_80B_A3B; break; // 48 main + 1 MTP
                     default: model.type = e_model::MODEL_UNKNOWN;
                 }
             } break;

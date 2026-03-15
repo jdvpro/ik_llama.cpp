@@ -886,7 +886,7 @@ TENSOR_NAMES: dict[MODEL_TENSOR, str] = {
     MODEL_TENSOR.SSM_C_NORM:            "blk.{bid}.ssm_c_norm",
     MODEL_TENSOR.SSM_NORM:              "blk.{bid}.ssm_norm",
     MODEL_TENSOR.SSM_ALPHA:             "blk.{bid}.ssm_alpha",
-    MODEL_TENSOR.SSM_BETA_ALPHA:        "blk.{bid}.ssm_beta_alpha",
+    MODEL_TENSOR.SSM_BETA_ALPHA:        "blk.{bid}.ssm_ba",
     MODEL_TENSOR.SSM_CONV1D_Q:          "blk.{bid}.ssm_conv1d_q",
     MODEL_TENSOR.SSM_CONV1D_K:          "blk.{bid}.ssm_conv1d_k",
     MODEL_TENSOR.SSM_CONV1D_V:          "blk.{bid}.ssm_conv1d_v",

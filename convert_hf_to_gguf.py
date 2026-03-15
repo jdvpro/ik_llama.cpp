@@ -4659,21 +4659,15 @@ class Qwen3NextModel(Qwen2MoeModel):
             self.tensor_map = gguf.get_tensor_name_map(self.model_arch, self.block_count)
 
     def set_gguf_parameters(self):
-        # Write num_hidden_layers as block_count (not block_count which includes MTP)
-        n_mtp = self._count_mtp_layers()
-        if n_mtp > 0:
-            saved_bc = self.block_count
-            self.block_count = self.hparams["num_hidden_layers"]
-            super().set_gguf_parameters()
-            self.block_count = saved_bc
-        else:
-            super().set_gguf_parameters()
+        # block_count includes MTP layers (C++ expects this)
+        super().set_gguf_parameters()
         self.gguf_writer.add_ssm_conv_kernel(self.hparams["linear_conv_kernel_dim"])
         self.gguf_writer.add_ssm_state_size(self.hparams["linear_key_head_dim"])
         self.gguf_writer.add_ssm_group_count(self.hparams["linear_num_key_heads"])
         self.gguf_writer.add_ssm_time_step_rank(self.hparams["linear_num_value_heads"])
         self.gguf_writer.add_ssm_inner_size(self.hparams["linear_value_head_dim"] * self.hparams["linear_num_value_heads"])
         self.gguf_writer.add_full_attention_interval(self.hparams.get("full_attention_interval", 4))
+        n_mtp = self._count_mtp_layers()
         if n_mtp > 0:
             self.gguf_writer.add_nextn_predict_layers(n_mtp)
         if (rope_dim := self.hparams.get("head_dim")) is None:
