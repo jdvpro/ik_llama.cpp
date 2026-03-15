@@ -4446,7 +4446,9 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
 
     ggml_tensor * cur = nullptr;
 
-    for (int il = 0; il < n_layer; ++il) {
+    const int n_main_layers = n_layer - (int)hparams.nextn_predict_layers;
+
+    for (int il = 0; il < n_main_layers; ++il) {
 
         GGML_ASSERT(model.layers[il].attn_norm != nullptr);
         GGML_ASSERT(model.layers[il].attn_post_norm != nullptr);
@@ -4464,9 +4466,9 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
 
 
         if (hparams.is_recurrent(il)) {
-            cur = delta.build_layer_attn_linear(ctx0, gf, inpL, il == n_layer - 1 ? inp_out_ids : nullptr, il, cb);
+            cur = delta.build_layer_attn_linear(ctx0, gf, inpL, il == n_main_layers - 1 ? inp_out_ids : nullptr, il, cb);
         } else {
-            cur = build_std_attention(gf, model.layers[il].attn_norm, inpL, inp_pos, il == n_layer - 1 ? inp_out_ids : nullptr, nullptr,
+            cur = build_std_attention(gf, model.layers[il].attn_norm, inpL, inp_pos, il == n_main_layers - 1 ? inp_out_ids : nullptr, nullptr,
                     KQ_mask, nullptr, nullptr, KQ_scale, 0.0f, 0, il, true, false, true, false, false);
         }
 
@@ -4486,7 +4488,7 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
                     model.layers[il].ffn_gate_exps, nullptr,
                     model.layers[il].ffn_down_exps, nullptr,
                     nullptr,
-                    model.layers[il].ffn_up_shexp,    nullptr, // we don't have shared expert biases?
+                    model.layers[il].ffn_up_shexp,    nullptr,
                     model.layers[il].ffn_gate_shexp,  nullptr,
                     model.layers[il].ffn_down_shexp,  nullptr,
                     n_expert, n_expert_used,
@@ -4505,6 +4507,66 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
     cb(cur, "result_output", -1);
 
     ggml_build_forward_expand(gf, cur);
+
+    // MTP (Multi-Token Prediction) tail
+    if (cparams.mtp_op_type != MTP_OP_NONE && hparams.nextn_predict_layers > 0) {
+        // hidden_states from main model are passed as input
+        ggml_tensor * mtp_hidden = ggml_new_tensor_2d(ctx0, GGML_TYPE_F32, hparams.n_embd, n_tokens);
+        ggml_set_name(mtp_hidden, "result_embd_pooled");
+        ggml_set_input(mtp_hidden);
+        lctx.inp_mtp_states = mtp_hidden;
+
+        for (uint32_t mtp_i = 0; mtp_i < hparams.nextn_predict_layers; ++mtp_i) {
+            const int il = n_main_layers + mtp_i;
+            const auto & mtp_layer = model.layers[il];
+
+            // 1. Token embedding (shared with main model)
+            ggml_tensor * mtp_embd_weights = mtp_layer.nextn.embed_tokens ? mtp_layer.nextn.embed_tokens : model.tok_embd;
+            ggml_tensor * token_emb = build_inp_embd_mtp(mtp_embd_weights);
+
+            // 2. Normalize embedding and hidden states
+            ggml_tensor * token_emb_norm = llm_build_norm(ctx0, token_emb, hparams, mtp_layer.nextn.enorm, NULL, LLM_NORM_RMS, cb, il);
+            ggml_tensor * hidden_norm = llm_build_norm(ctx0, mtp_hidden, hparams, mtp_layer.nextn.hnorm, NULL, LLM_NORM_RMS, cb, il);
+
+            // 3. Concatenate and project
+            ggml_tensor * combined = ggml_concat(ctx0, token_emb_norm, hidden_norm, 0);
+            cb(combined, "mtp_concat", il);
+            cur = llm_build_lora_mm(lctx, ctx0, mtp_layer.nextn.eh_proj, combined);
+
+            // 4. Decoder layer: attention
+            cur = build_std_attention(gf, mtp_layer.attn_norm, cur, inp_pos, nullptr, nullptr,
+                    KQ_mask, nullptr, nullptr, KQ_scale, 0.0f, 0, il, true, false, true, false, false);
+
+            // 5. Decoder layer: MoE FFN (same architecture as main layers)
+            GGML_ASSERT(mtp_layer.ffn_gate_inp != nullptr);
+            cur = llm_build_std_moe_ffn(ctx0, lctx, mtp_layer.attn_post_norm, cur,
+                    mtp_layer.ffn_gate_inp,  nullptr,
+                    mtp_layer.ffn_up_exps,   nullptr,
+                    mtp_layer.ffn_gate_exps, nullptr,
+                    mtp_layer.ffn_down_exps, nullptr,
+                    nullptr,
+                    mtp_layer.ffn_up_shexp,    nullptr,
+                    mtp_layer.ffn_gate_shexp,  nullptr,
+                    mtp_layer.ffn_down_shexp,  nullptr,
+                    n_expert, n_expert_used,
+                    LLM_FFN_SILU, true, false, 0.0f,
+                    LLM_EXPERT_GATING_FUNC_SOFTMAX,
+                    LLM_FFN_SILU, cb, il, gf, true, mtp_layer.ffn_up_gate_exps, nullptr, mtp_layer.ffn_gate_inp_shexp);
+
+            // 6. Final norm
+            cur = llm_build_norm(ctx0, cur, hparams, mtp_layer.nextn.shared_head_norm, NULL, LLM_NORM_RMS, cb, il);
+
+            // 7. Output head (shared lm_head)
+            ggml_tensor * mtp_head = mtp_layer.nextn.shared_head_head ? mtp_layer.nextn.shared_head_head : model.output;
+            cur = llm_build_lora_mm(lctx, ctx0, mtp_head, cur);
+            cb(cur, "result_output_mtp", il);
+
+            ggml_build_forward_expand(gf, cur);
+
+            // For chaining multiple MTP layers: hidden for next iteration
+            mtp_hidden = cur;
+        }
+    }
 
     return gf;
 }
