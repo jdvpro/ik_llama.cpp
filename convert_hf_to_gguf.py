@@ -4650,21 +4650,40 @@ class Qwen3MoeModel(Qwen2MoeModel):
 class Qwen3NextModel(Qwen2MoeModel):
     model_arch = gguf.MODEL_ARCH.QWEN3NEXT
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Extend block_count to include MTP layers so tensor_map covers them
+        n_mtp = self._count_mtp_layers()
+        if n_mtp > 0:
+            self.block_count += n_mtp
+            self.tensor_map = gguf.get_tensor_name_map(self.model_arch, self.block_count)
+
     def set_gguf_parameters(self):
-        super().set_gguf_parameters()
+        # Write num_hidden_layers as block_count (not block_count which includes MTP)
+        n_mtp = self._count_mtp_layers()
+        if n_mtp > 0:
+            saved_bc = self.block_count
+            self.block_count = self.hparams["num_hidden_layers"]
+            super().set_gguf_parameters()
+            self.block_count = saved_bc
+        else:
+            super().set_gguf_parameters()
         self.gguf_writer.add_ssm_conv_kernel(self.hparams["linear_conv_kernel_dim"])
         self.gguf_writer.add_ssm_state_size(self.hparams["linear_key_head_dim"])
         self.gguf_writer.add_ssm_group_count(self.hparams["linear_num_key_heads"])
         self.gguf_writer.add_ssm_time_step_rank(self.hparams["linear_num_value_heads"])
         self.gguf_writer.add_ssm_inner_size(self.hparams["linear_value_head_dim"] * self.hparams["linear_num_value_heads"])
         self.gguf_writer.add_full_attention_interval(self.hparams.get("full_attention_interval", 4))
+        if n_mtp > 0:
+            self.gguf_writer.add_nextn_predict_layers(n_mtp)
         if (rope_dim := self.hparams.get("head_dim")) is None:
             rope_dim = self.hparams["hidden_size"] // self.hparams["num_attention_heads"]
         self.gguf_writer.add_rope_dimension_count(int(rope_dim * self.hparams.get("partial_rotary_factor", 0.25)))
 
     def modify_tensors(self, data_torch: Tensor, name: str, bid: int | None) -> Iterable[tuple[str, Tensor]]:
-        if name.startswith("mtp"):
-            return  # ignore MTP layers for now
+        if name.startswith("mtp."):
+            yield from self._modify_mtp_tensors(data_torch, name)
+            return
         if name.endswith(".A_log"):
             data_torch = -torch.exp(data_torch)
         elif name.endswith(".dt_bias"):
@@ -4705,6 +4724,50 @@ class Qwen3NextModel(Qwen2MoeModel):
             yield (self.format_tensor_name(gguf.MODEL_TENSOR.ATTN_GATE, bid, ".weight"), z)
         else:
             yield from super().modify_tensors(data_torch, name, bid)
+
+    def _count_mtp_layers(self) -> int:
+        import re
+        layers = set()
+        for k in self.model_tensors:
+            m = re.match(r'mtp\.layers\.(\d+)\.', k)
+            if m:
+                layers.add(int(m.group(1)))
+        return len(layers)
+
+    def _modify_mtp_tensors(self, data_torch: Tensor, name: str) -> Iterable[tuple[str, Tensor]]:
+        import re
+        n_main = self.hparams["num_hidden_layers"]  # 48
+
+        mtp_idx_match = re.match(r'mtp\.layers\.(\d+)\.', name)
+        mtp_idx = int(mtp_idx_match.group(1)) if mtp_idx_match else 0
+        bid = n_main + mtp_idx
+
+        # NEXTN-specific tensors
+        if name == "mtp.fc.weight":
+            yield (self.format_tensor_name(gguf.MODEL_TENSOR.NEXTN_EH_PROJ, bid), data_torch)
+            return
+        if name == "mtp.pre_fc_norm_embedding.weight":
+            data_torch = data_torch + 1
+            yield (self.format_tensor_name(gguf.MODEL_TENSOR.NEXTN_ENORM, bid), data_torch)
+            return
+        if name == "mtp.pre_fc_norm_hidden.weight":
+            data_torch = data_torch + 1
+            yield (self.format_tensor_name(gguf.MODEL_TENSOR.NEXTN_HNORM, bid), data_torch)
+            return
+        if name == "mtp.norm.weight":
+            data_torch = data_torch + 1
+            yield (self.format_tensor_name(gguf.MODEL_TENSOR.NEXTN_SHARED_HEAD_NORM, bid), data_torch)
+            return
+
+        # Decoder layer tensors: remap to model.layers.{48+N}.X and re-enter
+        layer_name = re.sub(r'^mtp\.layers\.\d+\.', f'model.layers.{bid}.', name)
+
+        # Apply RMSNorm +1 offset for norm weights
+        if layer_name.endswith("norm.weight"):
+            data_torch = data_torch + 1
+
+        # Re-enter modify_tensors with remapped name and correct bid
+        yield from self.modify_tensors(data_torch, layer_name, bid)
 
 
 @ModelBase.register("RND1")

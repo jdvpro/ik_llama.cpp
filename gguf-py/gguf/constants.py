@@ -93,6 +93,7 @@ class Keys:
         EXPERT_WEIGHTS_SCALE              = "{arch}.expert_weights_scale"
         EXPERT_WEIGHTS_NORM               = "{arch}.expert_weights_norm"
         EXPERT_GATING_FUNC                = "{arch}.expert_gating_func"
+        FULL_ATTENTION_INTERVAL            = "{arch}.full_attention_interval"
         NEXTN_PREDICT_LAYERS              = "{arch}.nextn_predict_layers"
         POOLING_TYPE                      = "{arch}.pooling_type"
         LOGIT_SCALE                       = "{arch}.logit_scale"
@@ -142,6 +143,8 @@ class Keys:
         INNER_SIZE     = "{arch}.ssm.inner_size"
         STATE_SIZE     = "{arch}.ssm.state_size"
         TIME_STEP_RANK = "{arch}.ssm.time_step_rank"
+        GROUP_COUNT    = "{arch}.ssm.group_count"
+        DT_B_C_RMS     = "{arch}.ssm.dt_b_c_rms"
 
     class Tokenizer:
         MODEL                = "tokenizer.ggml.model"
@@ -2729,6 +2732,8 @@ class GGMLQuantizationType(IntEnum):
     Q4_0_4_4  =  31
     Q4_0_4_8  =  32
     Q4_0_8_8  =  33
+    TQ1_0     =  34
+    TQ2_0     =  35
     I2_S      =  36
     MXFP4     =  39
     Q8_0_X4   =  97
@@ -2832,6 +2837,8 @@ class LlamaFileType(IntEnum):
     MOSTLY_Q4_0_4_4      = 33  #except 1d tensors
     MOSTLY_Q4_0_4_8      = 34  #except 1d tensors
     MOSTLY_Q4_0_8_8      = 35  #except 1d tensors
+    MOSTLY_TQ1_0         = 36  #except 1d tensors
+    MOSTLY_TQ2_0         = 37  #except 1d tensors
     MOSTLY_MXFP4         = 38  #except 1d tensors, 38 to be compatible with mainline
 
     MOSTLY_Q6_0          = 135 #except 1d tensors

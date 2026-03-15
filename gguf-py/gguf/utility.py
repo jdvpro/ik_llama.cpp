@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
+
+import os
+import json
+import numpy as np
 
 
 def fill_templated_filename(filename: str, output_type: str | None) -> str:
@@ -47,7 +53,7 @@ def size_label(total_params: int, shared_params: int, expert_params: int, expert
 
 
 def naming_convention(model_name: str | None, base_name: str | None, finetune_string: str | None, version_string: str | None, size_label: str | None, output_type: str | None, model_type: Literal['vocab', 'LoRA'] | None = None) -> str:
-    # Reference: https://github.com/ggerganov/ggml/blob/master/docs/gguf.md#gguf-naming-convention
+    # Reference: https://github.com/ggml-org/ggml/blob/master/docs/gguf.md#gguf-naming-convention
 
     if base_name is not None:
         name = base_name.strip().replace(' ', '-').replace('/', '-')
@@ -67,3 +73,202 @@ def naming_convention(model_name: str | None, base_name: str | None, finetune_st
     kind = f"-{model_type.strip().replace(' ', '-')}" if model_type is not None else ""
 
     return f"{name}{parameters}{finetune}{version}{encoding}{kind}"
+
+
+@dataclass
+class RemoteTensor:
+    dtype: str
+    shape: tuple[int, ...]
+    offset_start: int
+    size: int
+    url: str
+
+    def data(self) -> bytearray:
+        data = bytearray(SafetensorRemote.get_data_by_range(url=self.url, start=self.offset_start, size=self.size))
+        return data
+
+
+class SafetensorRemote:
+    """
+    Utility class to handle remote safetensor files.
+    """
+
+    BASE_DOMAIN = "https://huggingface.co"
+
+    @classmethod
+    def get_list_tensors_hf_model(cls, model_id: str) -> dict[str, RemoteTensor]:
+        is_single_file = cls.check_file_exist(f"{cls.BASE_DOMAIN}/{model_id}/resolve/main/model.safetensors")
+        if is_single_file:
+            url = f"{cls.BASE_DOMAIN}/{model_id}/resolve/main/model.safetensors"
+            return cls.get_list_tensors(url)
+
+        index_url = f"{cls.BASE_DOMAIN}/{model_id}/resolve/main/model.safetensors.index.json"
+        is_multiple_files = cls.check_file_exist(index_url)
+        if is_multiple_files:
+            index_data = cls.get_data_by_range(index_url, 0)
+            index_str = index_data.decode('utf-8')
+            index_json = json.loads(index_str)
+            assert index_json.get("weight_map") is not None, "weight_map not found in index file"
+            weight_map = index_json["weight_map"]
+            all_files = list(set(weight_map.values()))
+            all_files.sort()
+            tensors: dict[str, RemoteTensor] = {}
+            for file in all_files:
+                url = f"{cls.BASE_DOMAIN}/{model_id}/resolve/main/{file}"
+                for key, val in cls.get_list_tensors(url).items():
+                    tensors[key] = val
+            return tensors
+
+        raise ValueError(
+            f"No safetensor file has been found for model {model_id}."
+            "If the repo has safetensor files, make sure the model is public or you have a "
+            "valid Hugging Face token set in the environment variable HF_TOKEN."
+        )
+
+    @classmethod
+    def get_list_tensors(cls, url: str) -> dict[str, RemoteTensor]:
+        metadata, data_start_offset = cls.get_metadata(url)
+        res: dict[str, RemoteTensor] = {}
+
+        for name, meta in metadata.items():
+            if name == "__metadata__":
+                continue
+            if not isinstance(meta, dict):
+                raise ValueError(f"Invalid metadata for tensor '{name}': {meta}")
+            try:
+                dtype = meta["dtype"]
+                shape = meta["shape"]
+                offset_start_relative, offset_end_relative = meta["data_offsets"]
+                size = offset_end_relative - offset_start_relative
+                offset_start = data_start_offset + offset_start_relative
+                res[name] = RemoteTensor(dtype=dtype, shape=tuple(shape), offset_start=offset_start, size=size, url=url)
+            except KeyError as e:
+                raise ValueError(f"Missing key in metadata for tensor '{name}': {e}, meta = {meta}")
+
+        res = dict(sorted(res.items(), key=lambda t: t[0]))
+        return res
+
+    @classmethod
+    def get_metadata(cls, url: str) -> tuple[dict, int]:
+        read_size = 5 * 1024 * 1024
+        raw_data = cls.get_data_by_range(url, 0, read_size)
+
+        if len(raw_data) < 8:
+            raise ValueError("Not enough data to read metadata size")
+        metadata_length = int.from_bytes(raw_data[:8], byteorder='little')
+        data_start_offset = 8 + metadata_length
+
+        if len(raw_data) < 8 + metadata_length:
+            raise ValueError(f"Could not read complete metadata. Need {8 + metadata_length} bytes, got {len(raw_data)}")
+
+        metadata_bytes = raw_data[8:8 + metadata_length]
+        metadata_str = metadata_bytes.decode('utf-8')
+        try:
+            metadata = json.loads(metadata_str)
+            return metadata, data_start_offset
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Failed to parse safetensor metadata as JSON: {e}")
+
+    @classmethod
+    def get_data_by_range(cls, url: str, start: int, size: int = -1) -> bytes:
+        import requests
+        from urllib.parse import urlparse
+
+        parsed_url = urlparse(url)
+        if not parsed_url.scheme or not parsed_url.netloc:
+            raise ValueError(f"Invalid URL: {url}")
+
+        headers = cls._get_request_headers()
+        if size > -1:
+            headers["Range"] = f"bytes={start}-{start + size}"
+        response = requests.get(url, allow_redirects=True, headers=headers)
+        response.raise_for_status()
+        return response.content[slice(size if size > -1 else None)]
+
+    @classmethod
+    def check_file_exist(cls, url: str) -> bool:
+        import requests
+        from urllib.parse import urlparse
+
+        parsed_url = urlparse(url)
+        if not parsed_url.scheme or not parsed_url.netloc:
+            raise ValueError(f"Invalid URL: {url}")
+
+        try:
+            headers = cls._get_request_headers()
+            headers["Range"] = "bytes=0-0"
+            response = requests.head(url, allow_redirects=True, headers=headers)
+            return 200 <= response.status_code < 400
+        except requests.RequestException:
+            return False
+
+    @classmethod
+    def _get_request_headers(cls) -> dict[str, str]:
+        headers = {"User-Agent": "convert_hf_to_gguf"}
+        if os.environ.get("HF_TOKEN"):
+            headers["Authorization"] = f"Bearer {os.environ['HF_TOKEN']}"
+        return headers
+
+
+@dataclass
+class LocalTensorRange:
+    filename: Path
+    offset: int
+    size: int
+
+
+@dataclass
+class LocalTensor:
+    dtype: str
+    shape: tuple[int, ...]
+    data_range: LocalTensorRange
+
+    def mmap_bytes(self) -> np.ndarray:
+        return np.memmap(self.data_range.filename, mode='c', offset=self.data_range.offset, shape=self.data_range.size)
+
+
+class SafetensorsLocal:
+    """
+    Read a safetensors file from the local filesystem.
+    """
+
+    tensors: dict[str, LocalTensor]
+
+    def __init__(self, filename: Path):
+        with open(filename, "rb") as f:
+            metadata_length = int.from_bytes(f.read(8), byteorder='little')
+            file_size = os.stat(filename).st_size
+            if file_size < 8 + metadata_length:
+                raise ValueError(f"Could not read complete metadata. Need {8 + metadata_length} bytes, got {file_size}")
+
+            metadata_str = f.read(metadata_length).decode('utf-8')
+            try:
+                metadata = json.loads(metadata_str)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Failed to parse safetensors metadata as JSON: {e}")
+
+            data_start_offset = f.tell()
+
+            tensors: dict[str, LocalTensor] = {}
+            for name, meta in metadata.items():
+                if name == "__metadata__":
+                    continue
+
+                tensors[name] = LocalTensor(
+                    dtype=meta["dtype"],
+                    shape=tuple(meta["shape"]),
+                    data_range=LocalTensorRange(
+                        filename,
+                        data_start_offset + meta["data_offsets"][0],
+                        meta["data_offsets"][1] - meta["data_offsets"][0],
+                    ),
+                )
+
+            self.tensors = dict(sorted(tensors.items(), key=lambda t: t[0]))
+
+    def __enter__(self, *args, **kwargs):
+        del args, kwargs
+        return self.tensors
+
+    def __exit__(self, *args, **kwargs):
+        del args, kwargs

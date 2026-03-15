@@ -416,11 +416,13 @@ class TensorNameMap:
         MODEL_TENSOR.SSM_IN: (
             "model.layers.{bid}.in_proj",
             "backbone.layers.{bid}.mixer.in_proj",
+            "model.layers.{bid}.linear_attn.in_proj_qkvz",  # qwen3next
         ),
 
         MODEL_TENSOR.SSM_CONV1D: (
             "model.layers.{bid}.conv1d",
             "backbone.layers.{bid}.mixer.conv1d",
+            "model.layers.{bid}.linear_attn.conv1d",  # qwen3next
         ),
 
         MODEL_TENSOR.SSM_X: (
@@ -431,11 +433,13 @@ class TensorNameMap:
         MODEL_TENSOR.SSM_DT: (
             "model.layers.{bid}.dt_proj",
             "backbone.layers.{bid}.mixer.dt_proj",
+            "model.layers.{bid}.linear_attn.dt_proj",  # qwen3next
         ),
 
         MODEL_TENSOR.SSM_A: (
             "model.layers.{bid}.A_log",
             "backbone.layers.{bid}.mixer.A_log",
+            "model.layers.{bid}.linear_attn.A_log",  # qwen3next
         ),
 
         MODEL_TENSOR.SSM_D: (
@@ -446,6 +450,17 @@ class TensorNameMap:
         MODEL_TENSOR.SSM_OUT: (
             "model.layers.{bid}.out_proj",
             "backbone.layers.{bid}.mixer.out_proj",
+            "model.layers.{bid}.linear_attn.out_proj",  # qwen3next
+        ),
+
+        MODEL_TENSOR.SSM_NORM: (
+            "model.layers.{bid}.mamba.norm",        # falcon-h1 granite-hybrid
+            "model.layers.{bid}.linear_attn.norm",  # qwen3next
+            "backbone.layers.{bid}.mixer.norm",     # mamba2
+        ),
+
+        MODEL_TENSOR.SSM_BETA_ALPHA: (
+            "model.layers.{bid}.linear_attn.in_proj_ba",  # qwen3next
         ),
 
         MODEL_TENSOR.ATTN_Q_A: (
