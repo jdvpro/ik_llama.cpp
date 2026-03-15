@@ -258,6 +258,77 @@ class MODEL_ARCH(IntEnum):
     SMOLLM3      = auto()
     SEED_OSS     = auto()
 
+    MMPROJ           = auto()
+    LLAMA4           = auto()
+    FALCON_H1        = auto()
+    MODERN_BERT      = auto()
+    NOMIC_BERT_MOE   = auto()
+    NEO_BERT         = auto()
+    JINA_BERT_V3     = auto()
+    EUROBERT         = auto()
+    QWEN2VL          = auto()
+    QWEN3NEXT        = auto()
+    QWEN3VL          = auto()
+    QWEN3VLMOE       = auto()
+    QWEN35           = auto()
+    QWEN35MOE        = auto()
+    PHIMOE           = auto()
+    PLAMO2           = auto()
+    PLAMO3           = auto()
+    MINICPM3         = auto()
+    GEMMA3N          = auto()
+    GEMMA_EMBEDDING  = auto()
+    RWKV6            = auto()
+    RWKV6QWEN2       = auto()
+    RWKV7            = auto()
+    ARWKV7           = auto()
+    MAMBA2           = auto()
+    JAMBA            = auto()
+    COHERE2          = auto()
+    OLMO2            = auto()
+    OLMOE            = auto()
+    DEEPSEEK         = auto()
+    GLM4             = auto()
+    GLM_DSA          = auto()
+    JAIS2            = auto()
+    NEMOTRON         = auto()
+    NEMOTRON_H       = auto()
+    NEMOTRON_H_MOE   = auto()
+    EXAONE           = auto()
+    EXAONE4          = auto()
+    EXAONE_MOE       = auto()
+    GRANITE          = auto()
+    GRANITE_MOE      = auto()
+    GRANITE_HYBRID   = auto()
+    CHAMELEON        = auto()
+    WAVTOKENIZER_DEC = auto()
+    PLM              = auto()
+    BAILINGMOE       = auto()
+    ARCEE            = auto()
+    AFMOE            = auto()
+    HUNYUAN_MOE      = auto()
+    HUNYUAN_DENSE    = auto()
+    GPT_OSS          = auto()
+    LFM2             = auto()
+    LFM2MOE          = auto()
+    DREAM            = auto()
+    SMALLTHINKER     = auto()
+    LLADA            = auto()
+    LLADA_MOE        = auto()
+    GROVEMOE         = auto()
+    APERTUS          = auto()
+    COGVLM           = auto()
+    RND1             = auto()
+    PANGU_EMBED      = auto()
+    MISTRAL3         = auto()
+    PADDLEOCR        = auto()
+    MIMO2            = auto()
+    STEP35           = auto()
+    LLAMA_EMBED      = auto()
+    MAINCODER        = auto()
+    KIMI_LINEAR      = auto()
+    BITNET_B158      = auto()
+
 class MODEL_TENSOR(IntEnum):
     TOKEN_EMBD           = auto()
     TOKEN_EMBD_NORM      = auto()
@@ -350,6 +421,218 @@ class MODEL_TENSOR(IntEnum):
     NEXTN_SHARED_HEAD_HEAD = auto() # nextn tensors (glm4moe)
     NEXTN_SHARED_HEAD_NORM = auto() # nextn tensors (glm4moe)
 
+    ATTN_SINKS           = auto()
+    ATTN_GATE            = auto()
+    FFN_GATE_UP_EXP      = auto()
+    FFN_GATE_CHEXP       = auto()
+    FFN_DOWN_CHEXP       = auto()
+    FFN_UP_CHEXP         = auto()
+    MOE_LATENT_DOWN      = auto()
+    MOE_LATENT_UP        = auto()
+    PER_LAYER_TOKEN_EMBD = auto()
+    PER_LAYER_MODEL_PROJ = auto()
+    PER_LAYER_INP_GATE   = auto()
+    PER_LAYER_PROJ       = auto()
+    PER_LAYER_PROJ_NORM  = auto()
+    PER_LAYER_POST_NORM  = auto()
+    ALTUP_PROJ           = auto()
+    ALTUP_UNEMBD_PROJ    = auto()
+    ALTUP_CORRECT_COEF   = auto()
+    ALTUP_CORRECT_SCALE  = auto()
+    ALTUP_PREDICT_COEF   = auto()
+    ALTUP_ROUTER         = auto()
+    ALTUP_ROUTER_NORM    = auto()
+    LAUREL_L             = auto()
+    LAUREL_R             = auto()
+    LAUREL_POST_NORM     = auto()
+    SSM_DT_NORM          = auto()
+    SSM_B_NORM           = auto()
+    SSM_C_NORM           = auto()
+    SSM_NORM             = auto()
+    SSM_ALPHA            = auto()
+    SSM_BETA_ALPHA       = auto()
+    SSM_CONV1D_Q         = auto()
+    SSM_CONV1D_K         = auto()
+    SSM_CONV1D_V         = auto()
+    SSM_F_A              = auto()
+    SSM_F_B              = auto()
+    SSM_BETA             = auto()
+    SSM_G_A              = auto()
+    SSM_G_B              = auto()
+    TIME_MIX_W0          = auto()
+    TIME_MIX_W1          = auto()
+    TIME_MIX_W2          = auto()
+    TIME_MIX_A0          = auto()
+    TIME_MIX_A1          = auto()
+    TIME_MIX_A2          = auto()
+    TIME_MIX_V0          = auto()
+    TIME_MIX_V1          = auto()
+    TIME_MIX_V2          = auto()
+    TIME_MIX_G1          = auto()
+    TIME_MIX_G2          = auto()
+    TIME_MIX_K_K         = auto()
+    TIME_MIX_K_A         = auto()
+    TIME_MIX_R_K         = auto()
+    TIME_MIX_LERP_X      = auto()
+    TIME_MIX_LERP_K      = auto()
+    TIME_MIX_LERP_V      = auto()
+    TIME_MIX_LERP_R      = auto()
+    TIME_MIX_LERP_G      = auto()
+    TIME_MIX_LERP_FUSED  = auto()
+    TIME_MIX_LERP_W      = auto()
+    TIME_MIX_FIRST       = auto()
+    TIME_MIX_DECAY       = auto()
+    TIME_MIX_DECAY_W1    = auto()
+    TIME_MIX_DECAY_W2    = auto()
+    TIME_MIX_KEY         = auto()
+    TIME_MIX_VALUE       = auto()
+    TIME_MIX_RECEPTANCE  = auto()
+    TIME_MIX_GATE        = auto()
+    TIME_MIX_LN          = auto()
+    TIME_MIX_OUTPUT      = auto()
+    CHANNEL_MIX_LERP_K   = auto()
+    CHANNEL_MIX_LERP_R   = auto()
+    CHANNEL_MIX_KEY      = auto()
+    CHANNEL_MIX_RECEPTANCE = auto()
+    CHANNEL_MIX_VALUE    = auto()
+    CLS                  = auto()
+    CLS_OUT              = auto()
+    CLS_NORM             = auto()
+    CONV1D               = auto()
+    CONVNEXT_DW          = auto()
+    CONVNEXT_NORM        = auto()
+    CONVNEXT_PW1         = auto()
+    CONVNEXT_PW2         = auto()
+    CONVNEXT_GAMMA       = auto()
+    POSNET_CONV1         = auto()
+    POSNET_CONV2         = auto()
+    POSNET_NORM          = auto()
+    POSNET_NORM1         = auto()
+    POSNET_NORM2         = auto()
+    POSNET_ATTN_NORM     = auto()
+    POSNET_ATTN_Q        = auto()
+    POSNET_ATTN_K        = auto()
+    POSNET_ATTN_V        = auto()
+    POSNET_ATTN_OUT      = auto()
+    SHORTCONV_CONV       = auto()
+    SHORTCONV_INPROJ     = auto()
+    SHORTCONV_OUTPROJ    = auto()
+    VISEXP_ATTN_QKV      = auto()
+    VISEXP_ATTN_OUT      = auto()
+    VISEXP_GATE          = auto()
+    VISEXP_DOWN          = auto()
+    VISEXP_UP            = auto()
+    INDEXER_K_NORM       = auto()
+    INDEXER_PROJ         = auto()
+    INDEXER_ATTN_K       = auto()
+    INDEXER_ATTN_Q_B     = auto()
+    V_MMPROJ             = auto()
+    V_MMPROJ_FC          = auto()
+    V_MMPROJ_MLP         = auto()
+    V_MMPROJ_PEG         = auto()
+    V_ENC_EMBD_CLS       = auto()
+    V_ENC_EMBD_PATCH     = auto()
+    V_ENC_EMBD_NORM      = auto()
+    V_ENC_EMBD_POS       = auto()
+    V_ENC_INPUT_NORM     = auto()
+    V_ENC_ATTN_QKV       = auto()
+    V_ENC_ATTN_Q         = auto()
+    V_ENC_ATTN_Q_NORM    = auto()
+    V_ENC_ATTN_K         = auto()
+    V_ENC_ATTN_K_NORM    = auto()
+    V_ENC_ATTN_V         = auto()
+    V_ENC_ATTN_O         = auto()
+    V_ENC_ATTN_O_NORM    = auto()
+    V_ENC_POST_ATTN_NORM = auto()
+    V_ENC_FFN_UP         = auto()
+    V_ENC_FFN_GATE       = auto()
+    V_ENC_FFN_DOWN       = auto()
+    V_LAYER_SCALE_1      = auto()
+    V_LAYER_SCALE_2      = auto()
+    V_PRE_NORM           = auto()
+    V_POST_NORM          = auto()
+    V_MM_POST_NORM       = auto()
+    V_MM_INP_NORM        = auto()
+    V_MM_INP_PROJ        = auto()
+    V_MM_SOFT_EMB_NORM   = auto()
+    V_MM_EMBEDDING       = auto()
+    V_MM_HARD_EMB_NORM   = auto()
+    V_ENC_CONV_STEM      = auto()
+    V_ENC_CONV_STEM_NORM = auto()
+    V_ENC_MSFA_EXP       = auto()
+    V_ENC_MSFA_EXP_NORM  = auto()
+    V_ENC_MSFA_PROJ      = auto()
+    V_ENC_MSFA_PROJ_NORM = auto()
+    V_ENC_MSFA_NORM      = auto()
+    V_RESMPL_POS_EMBD_K  = auto()
+    V_RESMPL_ATTN_Q      = auto()
+    V_RESMPL_ATTN_K      = auto()
+    V_RESMPL_ATTN_V      = auto()
+    V_RESMPL_ATTN_OUT    = auto()
+    V_RESMPL_KV          = auto()
+    V_RESMPL_KV_NORM     = auto()
+    V_RESMPL_POST_NORM   = auto()
+    V_RESMPL_Q_NORM      = auto()
+    V_RESMPL_PROJ        = auto()
+    V_RESMPL_QUERY       = auto()
+    V_TOK_EMBD_IMG_BREAK = auto()
+    V_MM_PATCH_MERGER    = auto()
+    V_DS_NORM            = auto()
+    V_DS_FC1             = auto()
+    V_DS_FC2             = auto()
+    V_MM_POST_FC_NORM    = auto()
+    V_MM_UP              = auto()
+    V_MM_DOWN            = auto()
+    V_MM_GATE            = auto()
+    V_TOK_BOI            = auto()
+    V_TOK_EOI            = auto()
+    A_ENC_EMBD_POS       = auto()
+    A_ENC_EMBD_NORM      = auto()
+    A_ENC_EMBD_TO_LOGITS = auto()
+    A_ENC_CONV1D         = auto()
+    A_ENC_CONV1D_NORM    = auto()
+    A_PRE_NORM           = auto()
+    A_POST_NORM          = auto()
+    A_ENC_LAYER_PRE_NORM = auto()
+    A_ENC_ATTN_Q         = auto()
+    A_ENC_ATTN_K         = auto()
+    A_ENC_ATTN_V         = auto()
+    A_ENC_PER_DIM_SCALE  = auto()
+    A_ENC_INPUT_NORM     = auto()
+    A_ENC_OUTPUT         = auto()
+    A_ENC_OUTPUT_NORM    = auto()
+    A_ENC_FFN_UP         = auto()
+    A_ENC_FFN_NORM       = auto()
+    A_ENC_FFN_POST_NORM  = auto()
+    A_ENC_FFN_SCALE      = auto()
+    A_ENC_FFN_GATE       = auto()
+    A_ENC_FFN_DOWN       = auto()
+    A_ENC_FFN_UP_1       = auto()
+    A_ENC_FFN_NORM_1     = auto()
+    A_ENC_FFN_POST_NORM_1 = auto()
+    A_ENC_FFN_SCALE_1    = auto()
+    A_ENC_FFN_GATE_1     = auto()
+    A_ENC_FFN_DOWN_1     = auto()
+    A_MMPROJ             = auto()
+    A_MMPROJ_FC          = auto()
+    A_MM_NORM_PRE        = auto()
+    A_MM_NORM_MID        = auto()
+    A_MM_INP_PROJ        = auto()
+    A_MM_SOFT_EMB_NORM   = auto()
+    A_MM_EMBEDDING       = auto()
+    A_MM_HARD_EMB_NORM   = auto()
+    A_ENC_NORM_CONV      = auto()
+    A_ENC_LINEAR_POS     = auto()
+    A_ENC_POS_BIAS_U     = auto()
+    A_ENC_POS_BIAS_V     = auto()
+    A_ENC_OUT            = auto()
+    A_ENC_CONV_DW        = auto()
+    A_ENC_CONV_NORM      = auto()
+    A_ENC_CONV_PW1       = auto()
+    A_ENC_CONV_PW2       = auto()
+    DENSE_2_OUT          = auto()
+    DENSE_3_OUT          = auto()
+
 
 MODEL_ARCH_NAMES: dict[MODEL_ARCH, str] = {
     MODEL_ARCH.LLAMA:          "llama",
@@ -406,6 +689,76 @@ MODEL_ARCH_NAMES: dict[MODEL_ARCH, str] = {
     MODEL_ARCH.MINIMAXM2:      "minimax-m2",
     MODEL_ARCH.SMOLLM3:        "smollm3",
     MODEL_ARCH.SEED_OSS:       "seed_oss",
+    MODEL_ARCH.MMPROJ:           "clip",
+    MODEL_ARCH.LLAMA4:           "llama4",
+    MODEL_ARCH.FALCON_H1:        "falcon-h1",
+    MODEL_ARCH.MODERN_BERT:      "modern-bert",
+    MODEL_ARCH.NOMIC_BERT_MOE:   "nomic-bert-moe",
+    MODEL_ARCH.NEO_BERT:         "neo-bert",
+    MODEL_ARCH.JINA_BERT_V3:     "jina-bert-v3",
+    MODEL_ARCH.EUROBERT:         "eurobert",
+    MODEL_ARCH.QWEN2VL:          "qwen2vl",
+    MODEL_ARCH.QWEN3NEXT:        "qwen3next",
+    MODEL_ARCH.QWEN3VL:          "qwen3vl",
+    MODEL_ARCH.QWEN3VLMOE:       "qwen3vlmoe",
+    MODEL_ARCH.QWEN35:           "qwen35",
+    MODEL_ARCH.QWEN35MOE:        "qwen35moe",
+    MODEL_ARCH.PHIMOE:           "phimoe",
+    MODEL_ARCH.PLAMO2:           "plamo2",
+    MODEL_ARCH.PLAMO3:           "plamo3",
+    MODEL_ARCH.MINICPM3:         "minicpm3",
+    MODEL_ARCH.GEMMA3N:          "gemma3n",
+    MODEL_ARCH.GEMMA_EMBEDDING:  "gemma-embedding",
+    MODEL_ARCH.RWKV6:            "rwkv6",
+    MODEL_ARCH.RWKV6QWEN2:       "rwkv6qwen2",
+    MODEL_ARCH.RWKV7:            "rwkv7",
+    MODEL_ARCH.ARWKV7:           "arwkv7",
+    MODEL_ARCH.MAMBA2:           "mamba2",
+    MODEL_ARCH.JAMBA:            "jamba",
+    MODEL_ARCH.COHERE2:          "cohere2",
+    MODEL_ARCH.OLMO2:            "olmo2",
+    MODEL_ARCH.OLMOE:            "olmoe",
+    MODEL_ARCH.DEEPSEEK:         "deepseek",
+    MODEL_ARCH.GLM4:             "glm4",
+    MODEL_ARCH.GLM_DSA:          "glm-dsa",
+    MODEL_ARCH.JAIS2:            "jais2",
+    MODEL_ARCH.NEMOTRON:         "nemotron",
+    MODEL_ARCH.NEMOTRON_H:       "nemotron_h",
+    MODEL_ARCH.NEMOTRON_H_MOE:   "nemotron_h_moe",
+    MODEL_ARCH.EXAONE:           "exaone",
+    MODEL_ARCH.EXAONE4:          "exaone4",
+    MODEL_ARCH.EXAONE_MOE:       "exaone-moe",
+    MODEL_ARCH.GRANITE:          "granite",
+    MODEL_ARCH.GRANITE_MOE:      "granitemoe",
+    MODEL_ARCH.GRANITE_HYBRID:   "granitehybrid",
+    MODEL_ARCH.CHAMELEON:        "chameleon",
+    MODEL_ARCH.WAVTOKENIZER_DEC: "wavtokenizer-dec",
+    MODEL_ARCH.PLM:              "plm",
+    MODEL_ARCH.BAILINGMOE:       "bailingmoe",
+    MODEL_ARCH.ARCEE:            "arcee",
+    MODEL_ARCH.AFMOE:            "afmoe",
+    MODEL_ARCH.HUNYUAN_MOE:      "hunyuan-moe",
+    MODEL_ARCH.HUNYUAN_DENSE:    "hunyuan-dense",
+    MODEL_ARCH.GPT_OSS:          "gpt-oss",
+    MODEL_ARCH.LFM2:             "lfm2",
+    MODEL_ARCH.LFM2MOE:          "lfm2moe",
+    MODEL_ARCH.DREAM:            "dream",
+    MODEL_ARCH.SMALLTHINKER:     "smallthinker",
+    MODEL_ARCH.LLADA:            "llada",
+    MODEL_ARCH.LLADA_MOE:        "llada-moe",
+    MODEL_ARCH.GROVEMOE:         "grovemoe",
+    MODEL_ARCH.APERTUS:          "apertus",
+    MODEL_ARCH.COGVLM:           "cogvlm",
+    MODEL_ARCH.RND1:             "rnd1",
+    MODEL_ARCH.PANGU_EMBED:      "pangu-embedded",
+    MODEL_ARCH.MISTRAL3:         "mistral3",
+    MODEL_ARCH.PADDLEOCR:        "paddleocr",
+    MODEL_ARCH.MIMO2:            "mimo2",
+    MODEL_ARCH.STEP35:           "step35",
+    MODEL_ARCH.LLAMA_EMBED:      "llama-embed",
+    MODEL_ARCH.MAINCODER:        "maincoder",
+    MODEL_ARCH.KIMI_LINEAR:      "kimi-linear",
+    MODEL_ARCH.BITNET_B158:      "bitnet-b158",
 }
 
 TENSOR_NAMES: dict[MODEL_TENSOR, str] = {
@@ -500,6 +853,218 @@ TENSOR_NAMES: dict[MODEL_TENSOR, str] = {
     MODEL_TENSOR.NEXTN_HNORM:               "blk.{bid}.nextn.hnorm",
     MODEL_TENSOR.NEXTN_SHARED_HEAD_HEAD:    "blk.{bid}.nextn.shared_head_head",
     MODEL_TENSOR.NEXTN_SHARED_HEAD_NORM:    "blk.{bid}.nextn.shared_head_norm",
+    # Vision/Audio/Multimodal tensors
+    MODEL_TENSOR.ATTN_SINKS:            "blk.{bid}.attn_sinks",
+    MODEL_TENSOR.ATTN_GATE:             "blk.{bid}.attn_gate",
+    MODEL_TENSOR.FFN_GATE_UP_EXP:       "blk.{bid}.ffn_gate_up_exps",
+    MODEL_TENSOR.FFN_GATE_CHEXP:        "blk.{bid}.ffn_gate_chexp",
+    MODEL_TENSOR.FFN_DOWN_CHEXP:        "blk.{bid}.ffn_down_chexp",
+    MODEL_TENSOR.FFN_UP_CHEXP:          "blk.{bid}.ffn_up_chexp",
+    MODEL_TENSOR.MOE_LATENT_DOWN:       "blk.{bid}.moe_latent_down",
+    MODEL_TENSOR.MOE_LATENT_UP:         "blk.{bid}.moe_latent_up",
+    MODEL_TENSOR.PER_LAYER_TOKEN_EMBD:  "blk.{bid}.token_embd",
+    MODEL_TENSOR.PER_LAYER_MODEL_PROJ:  "blk.{bid}.model_proj",
+    MODEL_TENSOR.PER_LAYER_INP_GATE:    "blk.{bid}.inp_gate",
+    MODEL_TENSOR.PER_LAYER_PROJ:        "blk.{bid}.proj",
+    MODEL_TENSOR.PER_LAYER_PROJ_NORM:   "blk.{bid}.proj_norm",
+    MODEL_TENSOR.PER_LAYER_POST_NORM:   "blk.{bid}.post_norm",
+    MODEL_TENSOR.ALTUP_PROJ:            "blk.{bid}.altup_proj",
+    MODEL_TENSOR.ALTUP_UNEMBD_PROJ:     "blk.{bid}.altup_unembd_proj",
+    MODEL_TENSOR.ALTUP_CORRECT_COEF:    "blk.{bid}.altup_correct_coef",
+    MODEL_TENSOR.ALTUP_CORRECT_SCALE:   "blk.{bid}.altup_correct_scale",
+    MODEL_TENSOR.ALTUP_PREDICT_COEF:    "blk.{bid}.altup_predict_coef",
+    MODEL_TENSOR.ALTUP_ROUTER:          "blk.{bid}.altup_router",
+    MODEL_TENSOR.ALTUP_ROUTER_NORM:     "blk.{bid}.altup_router_norm",
+    MODEL_TENSOR.LAUREL_L:              "blk.{bid}.laurel_l",
+    MODEL_TENSOR.LAUREL_R:              "blk.{bid}.laurel_r",
+    MODEL_TENSOR.LAUREL_POST_NORM:      "blk.{bid}.laurel_post_norm",
+    MODEL_TENSOR.SSM_DT_NORM:           "blk.{bid}.ssm_dt_norm",
+    MODEL_TENSOR.SSM_B_NORM:            "blk.{bid}.ssm_b_norm",
+    MODEL_TENSOR.SSM_C_NORM:            "blk.{bid}.ssm_c_norm",
+    MODEL_TENSOR.SSM_NORM:              "blk.{bid}.ssm_norm",
+    MODEL_TENSOR.SSM_ALPHA:             "blk.{bid}.ssm_alpha",
+    MODEL_TENSOR.SSM_BETA_ALPHA:        "blk.{bid}.ssm_beta_alpha",
+    MODEL_TENSOR.SSM_CONV1D_Q:          "blk.{bid}.ssm_conv1d_q",
+    MODEL_TENSOR.SSM_CONV1D_K:          "blk.{bid}.ssm_conv1d_k",
+    MODEL_TENSOR.SSM_CONV1D_V:          "blk.{bid}.ssm_conv1d_v",
+    MODEL_TENSOR.SSM_F_A:               "blk.{bid}.ssm_f_a",
+    MODEL_TENSOR.SSM_F_B:               "blk.{bid}.ssm_f_b",
+    MODEL_TENSOR.SSM_BETA:              "blk.{bid}.ssm_beta",
+    MODEL_TENSOR.SSM_G_A:               "blk.{bid}.ssm_g_a",
+    MODEL_TENSOR.SSM_G_B:               "blk.{bid}.ssm_g_b",
+    MODEL_TENSOR.TIME_MIX_W0:           "blk.{bid}.time_mix_w0",
+    MODEL_TENSOR.TIME_MIX_W1:           "blk.{bid}.time_mix_w1",
+    MODEL_TENSOR.TIME_MIX_W2:           "blk.{bid}.time_mix_w2",
+    MODEL_TENSOR.TIME_MIX_A0:           "blk.{bid}.time_mix_a0",
+    MODEL_TENSOR.TIME_MIX_A1:           "blk.{bid}.time_mix_a1",
+    MODEL_TENSOR.TIME_MIX_A2:           "blk.{bid}.time_mix_a2",
+    MODEL_TENSOR.TIME_MIX_V0:           "blk.{bid}.time_mix_v0",
+    MODEL_TENSOR.TIME_MIX_V1:           "blk.{bid}.time_mix_v1",
+    MODEL_TENSOR.TIME_MIX_V2:           "blk.{bid}.time_mix_v2",
+    MODEL_TENSOR.TIME_MIX_G1:           "blk.{bid}.time_mix_g1",
+    MODEL_TENSOR.TIME_MIX_G2:           "blk.{bid}.time_mix_g2",
+    MODEL_TENSOR.TIME_MIX_K_K:          "blk.{bid}.time_mix_k_k",
+    MODEL_TENSOR.TIME_MIX_K_A:          "blk.{bid}.time_mix_k_a",
+    MODEL_TENSOR.TIME_MIX_R_K:          "blk.{bid}.time_mix_r_k",
+    MODEL_TENSOR.TIME_MIX_LERP_X:       "blk.{bid}.time_mix_lerp_x",
+    MODEL_TENSOR.TIME_MIX_LERP_K:       "blk.{bid}.time_mix_lerp_k",
+    MODEL_TENSOR.TIME_MIX_LERP_V:       "blk.{bid}.time_mix_lerp_v",
+    MODEL_TENSOR.TIME_MIX_LERP_R:       "blk.{bid}.time_mix_lerp_r",
+    MODEL_TENSOR.TIME_MIX_LERP_G:       "blk.{bid}.time_mix_lerp_g",
+    MODEL_TENSOR.TIME_MIX_LERP_FUSED:   "blk.{bid}.time_mix_lerp_fused",
+    MODEL_TENSOR.TIME_MIX_LERP_W:       "blk.{bid}.time_mix_lerp_w",
+    MODEL_TENSOR.TIME_MIX_FIRST:        "blk.{bid}.time_mix_first",
+    MODEL_TENSOR.TIME_MIX_DECAY:        "blk.{bid}.time_mix_decay",
+    MODEL_TENSOR.TIME_MIX_DECAY_W1:     "blk.{bid}.time_mix_decay_w1",
+    MODEL_TENSOR.TIME_MIX_DECAY_W2:     "blk.{bid}.time_mix_decay_w2",
+    MODEL_TENSOR.TIME_MIX_KEY:          "blk.{bid}.time_mix_key",
+    MODEL_TENSOR.TIME_MIX_VALUE:        "blk.{bid}.time_mix_value",
+    MODEL_TENSOR.TIME_MIX_RECEPTANCE:   "blk.{bid}.time_mix_receptance",
+    MODEL_TENSOR.TIME_MIX_GATE:         "blk.{bid}.time_mix_gate",
+    MODEL_TENSOR.TIME_MIX_LN:           "blk.{bid}.time_mix_ln",
+    MODEL_TENSOR.TIME_MIX_OUTPUT:       "blk.{bid}.time_mix_output",
+    MODEL_TENSOR.CHANNEL_MIX_LERP_K:    "blk.{bid}.channel_mix_lerp_k",
+    MODEL_TENSOR.CHANNEL_MIX_LERP_R:    "blk.{bid}.channel_mix_lerp_r",
+    MODEL_TENSOR.CHANNEL_MIX_KEY:       "blk.{bid}.channel_mix_key",
+    MODEL_TENSOR.CHANNEL_MIX_RECEPTANCE: "blk.{bid}.channel_mix_receptance",
+    MODEL_TENSOR.CHANNEL_MIX_VALUE:     "blk.{bid}.channel_mix_value",
+    MODEL_TENSOR.CLS:                   "cls",
+    MODEL_TENSOR.CLS_OUT:               "cls.output",
+    MODEL_TENSOR.CLS_NORM:              "cls.output_norm",
+    MODEL_TENSOR.CONV1D:                "blk.{bid}.conv1d",
+    MODEL_TENSOR.CONVNEXT_DW:           "blk.{bid}.convnext_dw",
+    MODEL_TENSOR.CONVNEXT_NORM:         "blk.{bid}.convnext_norm",
+    MODEL_TENSOR.CONVNEXT_PW1:          "blk.{bid}.convnext_pw1",
+    MODEL_TENSOR.CONVNEXT_PW2:          "blk.{bid}.convnext_pw2",
+    MODEL_TENSOR.CONVNEXT_GAMMA:        "blk.{bid}.convnext_gamma",
+    MODEL_TENSOR.POSNET_CONV1:          "blk.{bid}.posnet_conv1",
+    MODEL_TENSOR.POSNET_CONV2:          "blk.{bid}.posnet_conv2",
+    MODEL_TENSOR.POSNET_NORM:           "blk.{bid}.posnet_norm",
+    MODEL_TENSOR.POSNET_NORM1:          "blk.{bid}.posnet_norm1",
+    MODEL_TENSOR.POSNET_NORM2:          "blk.{bid}.posnet_norm2",
+    MODEL_TENSOR.POSNET_ATTN_NORM:      "blk.{bid}.posnet_attn_norm",
+    MODEL_TENSOR.POSNET_ATTN_Q:         "blk.{bid}.posnet_attn_q",
+    MODEL_TENSOR.POSNET_ATTN_K:         "blk.{bid}.posnet_attn_k",
+    MODEL_TENSOR.POSNET_ATTN_V:         "blk.{bid}.posnet_attn_v",
+    MODEL_TENSOR.POSNET_ATTN_OUT:       "blk.{bid}.posnet_attn_out",
+    MODEL_TENSOR.SHORTCONV_CONV:        "blk.{bid}.shortconv_conv",
+    MODEL_TENSOR.SHORTCONV_INPROJ:      "blk.{bid}.shortconv_inproj",
+    MODEL_TENSOR.SHORTCONV_OUTPROJ:     "blk.{bid}.shortconv_outproj",
+    MODEL_TENSOR.VISEXP_ATTN_QKV:       "blk.{bid}.visexp_attn_qkv",
+    MODEL_TENSOR.VISEXP_ATTN_OUT:       "blk.{bid}.visexp_attn_out",
+    MODEL_TENSOR.VISEXP_GATE:           "blk.{bid}.visexp_gate",
+    MODEL_TENSOR.VISEXP_DOWN:           "blk.{bid}.visexp_down",
+    MODEL_TENSOR.VISEXP_UP:             "blk.{bid}.visexp_up",
+    MODEL_TENSOR.INDEXER_K_NORM:        "blk.{bid}.indexer_k_norm",
+    MODEL_TENSOR.INDEXER_PROJ:          "blk.{bid}.indexer_proj",
+    MODEL_TENSOR.INDEXER_ATTN_K:        "blk.{bid}.indexer_attn_k",
+    MODEL_TENSOR.INDEXER_ATTN_Q_B:      "blk.{bid}.indexer_attn_q_b",
+    MODEL_TENSOR.V_MMPROJ:              "v.mmproj",
+    MODEL_TENSOR.V_MMPROJ_FC:           "v.mmproj_fc",
+    MODEL_TENSOR.V_MMPROJ_MLP:          "v.mmproj_mlp",
+    MODEL_TENSOR.V_MMPROJ_PEG:          "v.mmproj_peg",
+    MODEL_TENSOR.V_ENC_EMBD_CLS:        "v.enc_embd_cls",
+    MODEL_TENSOR.V_ENC_EMBD_PATCH:      "v.enc_embd_patch",
+    MODEL_TENSOR.V_ENC_EMBD_NORM:       "v.enc_embd_norm",
+    MODEL_TENSOR.V_ENC_EMBD_POS:        "v.enc_embd_pos",
+    MODEL_TENSOR.V_ENC_INPUT_NORM:       "v.enc_input_norm",
+    MODEL_TENSOR.V_ENC_ATTN_QKV:        "v.blk.{bid}.attn_qkv",
+    MODEL_TENSOR.V_ENC_ATTN_Q:          "v.blk.{bid}.attn_q",
+    MODEL_TENSOR.V_ENC_ATTN_Q_NORM:     "v.blk.{bid}.attn_q_norm",
+    MODEL_TENSOR.V_ENC_ATTN_K:          "v.blk.{bid}.attn_k",
+    MODEL_TENSOR.V_ENC_ATTN_K_NORM:     "v.blk.{bid}.attn_k_norm",
+    MODEL_TENSOR.V_ENC_ATTN_V:          "v.blk.{bid}.attn_v",
+    MODEL_TENSOR.V_ENC_ATTN_O:          "v.blk.{bid}.attn_output",
+    MODEL_TENSOR.V_ENC_ATTN_O_NORM:     "v.blk.{bid}.attn_output_norm",
+    MODEL_TENSOR.V_ENC_POST_ATTN_NORM:  "v.blk.{bid}.post_attn_norm",
+    MODEL_TENSOR.V_ENC_FFN_UP:          "v.blk.{bid}.ffn_up",
+    MODEL_TENSOR.V_ENC_FFN_GATE:        "v.blk.{bid}.ffn_gate",
+    MODEL_TENSOR.V_ENC_FFN_DOWN:        "v.blk.{bid}.ffn_down",
+    MODEL_TENSOR.V_LAYER_SCALE_1:       "v.blk.{bid}.ls1",
+    MODEL_TENSOR.V_LAYER_SCALE_2:       "v.blk.{bid}.ls2",
+    MODEL_TENSOR.V_PRE_NORM:            "v.pre_norm",
+    MODEL_TENSOR.V_POST_NORM:           "v.post_norm",
+    MODEL_TENSOR.V_MM_POST_NORM:        "v.mm.post_norm",
+    MODEL_TENSOR.V_MM_INP_NORM:         "v.mm.inp_norm",
+    MODEL_TENSOR.V_MM_INP_PROJ:         "v.mm.inp_proj",
+    MODEL_TENSOR.V_MM_SOFT_EMB_NORM:    "v.mm.soft_emb_norm",
+    MODEL_TENSOR.V_MM_EMBEDDING:        "v.mm.embedding",
+    MODEL_TENSOR.V_MM_HARD_EMB_NORM:    "v.mm.hard_emb_norm",
+    MODEL_TENSOR.V_ENC_CONV_STEM:       "v.enc_conv_stem",
+    MODEL_TENSOR.V_ENC_CONV_STEM_NORM:  "v.enc_conv_stem_norm",
+    MODEL_TENSOR.V_ENC_MSFA_EXP:        "v.blk.{bid}.msfa_exp",
+    MODEL_TENSOR.V_ENC_MSFA_EXP_NORM:   "v.blk.{bid}.msfa_exp_norm",
+    MODEL_TENSOR.V_ENC_MSFA_PROJ:       "v.blk.{bid}.msfa_proj",
+    MODEL_TENSOR.V_ENC_MSFA_PROJ_NORM:  "v.blk.{bid}.msfa_proj_norm",
+    MODEL_TENSOR.V_ENC_MSFA_NORM:       "v.blk.{bid}.msfa_norm",
+    MODEL_TENSOR.V_RESMPL_POS_EMBD_K:   "v.resmpl.pos_embd_k",
+    MODEL_TENSOR.V_RESMPL_ATTN_Q:       "v.resmpl.attn_q",
+    MODEL_TENSOR.V_RESMPL_ATTN_K:       "v.resmpl.attn_k",
+    MODEL_TENSOR.V_RESMPL_ATTN_V:       "v.resmpl.attn_v",
+    MODEL_TENSOR.V_RESMPL_ATTN_OUT:     "v.resmpl.attn_out",
+    MODEL_TENSOR.V_RESMPL_KV:           "v.resmpl.kv",
+    MODEL_TENSOR.V_RESMPL_KV_NORM:      "v.resmpl.kv_norm",
+    MODEL_TENSOR.V_RESMPL_POST_NORM:    "v.resmpl.post_norm",
+    MODEL_TENSOR.V_RESMPL_Q_NORM:       "v.resmpl.q_norm",
+    MODEL_TENSOR.V_RESMPL_PROJ:         "v.resmpl.proj",
+    MODEL_TENSOR.V_RESMPL_QUERY:        "v.resmpl.query",
+    MODEL_TENSOR.V_TOK_EMBD_IMG_BREAK:  "v.tok_embd_img_break",
+    MODEL_TENSOR.V_MM_PATCH_MERGER:      "v.mm.patch_merger",
+    MODEL_TENSOR.V_DS_NORM:             "v.ds.norm",
+    MODEL_TENSOR.V_DS_FC1:              "v.ds.fc1",
+    MODEL_TENSOR.V_DS_FC2:              "v.ds.fc2",
+    MODEL_TENSOR.V_MM_POST_FC_NORM:     "v.mm.post_fc_norm",
+    MODEL_TENSOR.V_MM_UP:               "v.mm.up",
+    MODEL_TENSOR.V_MM_DOWN:             "v.mm.down",
+    MODEL_TENSOR.V_MM_GATE:             "v.mm.gate",
+    MODEL_TENSOR.V_TOK_BOI:             "v.tok_boi",
+    MODEL_TENSOR.V_TOK_EOI:             "v.tok_eoi",
+    MODEL_TENSOR.A_ENC_EMBD_POS:        "a.enc_embd_pos",
+    MODEL_TENSOR.A_ENC_EMBD_NORM:       "a.enc_embd_norm",
+    MODEL_TENSOR.A_ENC_EMBD_TO_LOGITS:  "a.enc_embd_to_logits",
+    MODEL_TENSOR.A_ENC_CONV1D:          "a.enc_conv1d",
+    MODEL_TENSOR.A_ENC_CONV1D_NORM:     "a.enc_conv1d_norm",
+    MODEL_TENSOR.A_PRE_NORM:            "a.pre_norm",
+    MODEL_TENSOR.A_POST_NORM:           "a.post_norm",
+    MODEL_TENSOR.A_ENC_LAYER_PRE_NORM:  "a.blk.{bid}.layer_pre_norm",
+    MODEL_TENSOR.A_ENC_ATTN_Q:          "a.blk.{bid}.attn_q",
+    MODEL_TENSOR.A_ENC_ATTN_K:          "a.blk.{bid}.attn_k",
+    MODEL_TENSOR.A_ENC_ATTN_V:          "a.blk.{bid}.attn_v",
+    MODEL_TENSOR.A_ENC_PER_DIM_SCALE:   "a.blk.{bid}.per_dim_scale",
+    MODEL_TENSOR.A_ENC_INPUT_NORM:       "a.enc_input_norm",
+    MODEL_TENSOR.A_ENC_OUTPUT:          "a.enc_output",
+    MODEL_TENSOR.A_ENC_OUTPUT_NORM:     "a.enc_output_norm",
+    MODEL_TENSOR.A_ENC_FFN_UP:          "a.blk.{bid}.ffn_up",
+    MODEL_TENSOR.A_ENC_FFN_NORM:        "a.blk.{bid}.ffn_norm",
+    MODEL_TENSOR.A_ENC_FFN_POST_NORM:   "a.blk.{bid}.ffn_post_norm",
+    MODEL_TENSOR.A_ENC_FFN_SCALE:       "a.blk.{bid}.ffn_scale",
+    MODEL_TENSOR.A_ENC_FFN_GATE:        "a.blk.{bid}.ffn_gate",
+    MODEL_TENSOR.A_ENC_FFN_DOWN:        "a.blk.{bid}.ffn_down",
+    MODEL_TENSOR.A_ENC_FFN_UP_1:        "a.blk.{bid}.ffn_up_1",
+    MODEL_TENSOR.A_ENC_FFN_NORM_1:      "a.blk.{bid}.ffn_norm_1",
+    MODEL_TENSOR.A_ENC_FFN_POST_NORM_1: "a.blk.{bid}.ffn_post_norm_1",
+    MODEL_TENSOR.A_ENC_FFN_SCALE_1:     "a.blk.{bid}.ffn_scale_1",
+    MODEL_TENSOR.A_ENC_FFN_GATE_1:      "a.blk.{bid}.ffn_gate_1",
+    MODEL_TENSOR.A_ENC_FFN_DOWN_1:      "a.blk.{bid}.ffn_down_1",
+    MODEL_TENSOR.A_MMPROJ:              "a.mmproj",
+    MODEL_TENSOR.A_MMPROJ_FC:           "a.mmproj_fc",
+    MODEL_TENSOR.A_MM_NORM_PRE:         "a.mm.norm_pre",
+    MODEL_TENSOR.A_MM_NORM_MID:         "a.mm.norm_mid",
+    MODEL_TENSOR.A_MM_INP_PROJ:         "a.mm.inp_proj",
+    MODEL_TENSOR.A_MM_SOFT_EMB_NORM:    "a.mm.soft_emb_norm",
+    MODEL_TENSOR.A_MM_EMBEDDING:        "a.mm.embedding",
+    MODEL_TENSOR.A_MM_HARD_EMB_NORM:    "a.mm.hard_emb_norm",
+    MODEL_TENSOR.A_ENC_NORM_CONV:       "a.blk.{bid}.norm_conv",
+    MODEL_TENSOR.A_ENC_LINEAR_POS:      "a.blk.{bid}.linear_pos",
+    MODEL_TENSOR.A_ENC_POS_BIAS_U:      "a.blk.{bid}.pos_bias_u",
+    MODEL_TENSOR.A_ENC_POS_BIAS_V:      "a.blk.{bid}.pos_bias_v",
+    MODEL_TENSOR.A_ENC_OUT:             "a.blk.{bid}.out",
+    MODEL_TENSOR.A_ENC_CONV_DW:         "a.blk.{bid}.conv_dw",
+    MODEL_TENSOR.A_ENC_CONV_NORM:       "a.blk.{bid}.conv_norm",
+    MODEL_TENSOR.A_ENC_CONV_PW1:        "a.blk.{bid}.conv_pw1",
+    MODEL_TENSOR.A_ENC_CONV_PW2:        "a.blk.{bid}.conv_pw2",
+    MODEL_TENSOR.DENSE_2_OUT:           "dense_2_out",
+    MODEL_TENSOR.DENSE_3_OUT:           "dense_3_out",
 }
 
 MODEL_TENSORS: dict[MODEL_ARCH, list[MODEL_TENSOR]] = {
@@ -1384,7 +1949,682 @@ MODEL_TENSORS: dict[MODEL_ARCH, list[MODEL_TENSOR]] = {
         MODEL_TENSOR.OUTPUT_NORM,
         MODEL_TENSOR.OUTPUT,
     ],
-    # TODO
+    MODEL_ARCH.MMPROJ: [
+        MODEL_TENSOR.V_MMPROJ,
+        MODEL_TENSOR.V_MMPROJ_FC,
+        MODEL_TENSOR.V_MMPROJ_MLP,
+        MODEL_TENSOR.V_MMPROJ_PEG,
+        MODEL_TENSOR.V_ENC_EMBD_CLS,
+        MODEL_TENSOR.V_ENC_EMBD_PATCH,
+        MODEL_TENSOR.V_ENC_EMBD_NORM,
+        MODEL_TENSOR.V_ENC_EMBD_POS,
+        MODEL_TENSOR.V_ENC_INPUT_NORM,
+        MODEL_TENSOR.V_ENC_ATTN_QKV,
+        MODEL_TENSOR.V_ENC_ATTN_Q,
+        MODEL_TENSOR.V_ENC_ATTN_Q_NORM,
+        MODEL_TENSOR.V_ENC_ATTN_K,
+        MODEL_TENSOR.V_ENC_ATTN_K_NORM,
+        MODEL_TENSOR.V_ENC_ATTN_V,
+        MODEL_TENSOR.V_ENC_ATTN_O,
+        MODEL_TENSOR.V_ENC_ATTN_O_NORM,
+        MODEL_TENSOR.V_ENC_POST_ATTN_NORM,
+        MODEL_TENSOR.V_ENC_FFN_UP,
+        MODEL_TENSOR.V_ENC_FFN_GATE,
+        MODEL_TENSOR.V_ENC_FFN_DOWN,
+        MODEL_TENSOR.V_LAYER_SCALE_1,
+        MODEL_TENSOR.V_LAYER_SCALE_2,
+        MODEL_TENSOR.V_PRE_NORM,
+        MODEL_TENSOR.V_POST_NORM,
+        MODEL_TENSOR.V_MM_POST_NORM,
+        MODEL_TENSOR.V_MM_INP_PROJ,
+        MODEL_TENSOR.V_MM_INP_NORM,
+        MODEL_TENSOR.V_MM_SOFT_EMB_NORM,
+        MODEL_TENSOR.V_MM_EMBEDDING,
+        MODEL_TENSOR.V_MM_HARD_EMB_NORM,
+        MODEL_TENSOR.V_ENC_CONV_STEM,
+        MODEL_TENSOR.V_ENC_CONV_STEM_NORM,
+        MODEL_TENSOR.V_ENC_MSFA_EXP,
+        MODEL_TENSOR.V_ENC_MSFA_EXP_NORM,
+        MODEL_TENSOR.V_ENC_MSFA_PROJ,
+        MODEL_TENSOR.V_ENC_MSFA_PROJ_NORM,
+        MODEL_TENSOR.V_ENC_MSFA_NORM,
+        MODEL_TENSOR.V_RESMPL_POS_EMBD_K,
+        MODEL_TENSOR.V_RESMPL_ATTN_Q,
+        MODEL_TENSOR.V_RESMPL_ATTN_K,
+        MODEL_TENSOR.V_RESMPL_ATTN_V,
+        MODEL_TENSOR.V_RESMPL_ATTN_OUT,
+        MODEL_TENSOR.V_RESMPL_KV,
+        MODEL_TENSOR.V_RESMPL_KV_NORM,
+        MODEL_TENSOR.V_RESMPL_POST_NORM,
+        MODEL_TENSOR.V_RESMPL_Q_NORM,
+        MODEL_TENSOR.V_RESMPL_PROJ,
+        MODEL_TENSOR.V_RESMPL_QUERY,
+        MODEL_TENSOR.V_TOK_EMBD_IMG_BREAK,
+        MODEL_TENSOR.V_MM_PATCH_MERGER,
+        MODEL_TENSOR.V_DS_NORM,
+        MODEL_TENSOR.V_DS_FC1,
+        MODEL_TENSOR.V_DS_FC2,
+        MODEL_TENSOR.V_MM_POST_FC_NORM,
+        MODEL_TENSOR.V_MM_UP,
+        MODEL_TENSOR.V_MM_DOWN,
+        MODEL_TENSOR.V_MM_GATE,
+        MODEL_TENSOR.V_TOK_BOI,
+        MODEL_TENSOR.V_TOK_EOI,
+        MODEL_TENSOR.A_ENC_EMBD_POS,
+        MODEL_TENSOR.A_ENC_EMBD_NORM,
+        MODEL_TENSOR.A_ENC_EMBD_TO_LOGITS,
+        MODEL_TENSOR.A_ENC_CONV1D,
+        MODEL_TENSOR.A_ENC_CONV1D_NORM,
+        MODEL_TENSOR.A_PRE_NORM,
+        MODEL_TENSOR.A_POST_NORM,
+        MODEL_TENSOR.A_ENC_LAYER_PRE_NORM,
+        MODEL_TENSOR.A_ENC_ATTN_Q,
+        MODEL_TENSOR.A_ENC_ATTN_K,
+        MODEL_TENSOR.A_ENC_ATTN_V,
+        MODEL_TENSOR.A_ENC_PER_DIM_SCALE,
+        MODEL_TENSOR.A_ENC_INPUT_NORM,
+        MODEL_TENSOR.A_ENC_OUTPUT,
+        MODEL_TENSOR.A_ENC_OUTPUT_NORM,
+        MODEL_TENSOR.A_ENC_FFN_NORM,
+        MODEL_TENSOR.A_ENC_FFN_POST_NORM,
+        MODEL_TENSOR.A_ENC_FFN_SCALE,
+        MODEL_TENSOR.A_ENC_FFN_UP,
+        MODEL_TENSOR.A_ENC_FFN_GATE,
+        MODEL_TENSOR.A_ENC_FFN_DOWN,
+        MODEL_TENSOR.A_ENC_FFN_NORM_1,
+        MODEL_TENSOR.A_ENC_FFN_POST_NORM_1,
+        MODEL_TENSOR.A_ENC_FFN_SCALE_1,
+        MODEL_TENSOR.A_ENC_FFN_UP_1,
+        MODEL_TENSOR.A_ENC_FFN_GATE_1,
+        MODEL_TENSOR.A_ENC_FFN_DOWN_1,
+        MODEL_TENSOR.A_MMPROJ,
+        MODEL_TENSOR.A_MMPROJ_FC,
+        MODEL_TENSOR.A_MM_NORM_PRE,
+        MODEL_TENSOR.A_MM_NORM_MID,
+        MODEL_TENSOR.A_ENC_NORM_CONV,
+        MODEL_TENSOR.A_ENC_LINEAR_POS,
+        MODEL_TENSOR.A_ENC_POS_BIAS_U,
+        MODEL_TENSOR.A_ENC_POS_BIAS_V,
+        MODEL_TENSOR.A_ENC_OUT,
+        MODEL_TENSOR.A_ENC_CONV_DW,
+        MODEL_TENSOR.A_ENC_CONV_NORM,
+        MODEL_TENSOR.A_ENC_CONV_PW1,
+        MODEL_TENSOR.A_ENC_CONV_PW2,
+        MODEL_TENSOR.A_MM_INP_PROJ,
+        MODEL_TENSOR.A_MM_SOFT_EMB_NORM,
+        MODEL_TENSOR.A_MM_EMBEDDING,
+        MODEL_TENSOR.A_MM_HARD_EMB_NORM,
+    ],
+    MODEL_ARCH.QWEN3NEXT: [
+        MODEL_TENSOR.TOKEN_EMBD,
+        MODEL_TENSOR.OUTPUT_NORM,
+        MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_Q_NORM,
+        MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_K_NORM,
+        MODEL_TENSOR.ATTN_V,
+        MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_POST_NORM,
+        MODEL_TENSOR.ATTN_GATE,
+        MODEL_TENSOR.ATTN_QKV,
+        MODEL_TENSOR.FFN_GATE_INP,
+        MODEL_TENSOR.FFN_GATE_INP_SHEXP,
+        MODEL_TENSOR.FFN_UP_SHEXP,
+        MODEL_TENSOR.FFN_DOWN_SHEXP,
+        MODEL_TENSOR.FFN_GATE_SHEXP,
+        MODEL_TENSOR.FFN_DOWN_EXP,
+        MODEL_TENSOR.FFN_UP_EXP,
+        MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_GATE_UP_EXP,
+        MODEL_TENSOR.SSM_A,
+        MODEL_TENSOR.SSM_CONV1D,
+        MODEL_TENSOR.SSM_DT,
+        MODEL_TENSOR.SSM_NORM,
+        MODEL_TENSOR.SSM_IN,
+        MODEL_TENSOR.SSM_BETA_ALPHA,
+        MODEL_TENSOR.SSM_OUT,
+        MODEL_TENSOR.NEXTN_EH_PROJ,
+        MODEL_TENSOR.NEXTN_EMBED_TOKENS,
+        MODEL_TENSOR.NEXTN_ENORM,
+        MODEL_TENSOR.NEXTN_HNORM,
+        MODEL_TENSOR.NEXTN_SHARED_HEAD_HEAD,
+        MODEL_TENSOR.NEXTN_SHARED_HEAD_NORM,
+    ],
+    MODEL_ARCH.QWEN35: [
+        MODEL_TENSOR.TOKEN_EMBD,
+        MODEL_TENSOR.OUTPUT_NORM,
+        MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_Q_NORM,
+        MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_K_NORM,
+        MODEL_TENSOR.ATTN_V,
+        MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_POST_NORM,
+        MODEL_TENSOR.ATTN_GATE,
+        MODEL_TENSOR.ATTN_QKV,
+        MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN,
+        MODEL_TENSOR.FFN_UP,
+        MODEL_TENSOR.SSM_A,
+        MODEL_TENSOR.SSM_CONV1D,
+        MODEL_TENSOR.SSM_DT,
+        MODEL_TENSOR.SSM_NORM,
+        MODEL_TENSOR.SSM_BETA,
+        MODEL_TENSOR.SSM_ALPHA,
+        MODEL_TENSOR.SSM_OUT,
+    ],
+    MODEL_ARCH.QWEN35MOE: [
+        MODEL_TENSOR.TOKEN_EMBD,
+        MODEL_TENSOR.OUTPUT_NORM,
+        MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_Q_NORM,
+        MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_K_NORM,
+        MODEL_TENSOR.ATTN_V,
+        MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_POST_NORM,
+        MODEL_TENSOR.ATTN_GATE,
+        MODEL_TENSOR.ATTN_QKV,
+        MODEL_TENSOR.FFN_GATE_INP,
+        MODEL_TENSOR.FFN_GATE_INP_SHEXP,
+        MODEL_TENSOR.FFN_UP_SHEXP,
+        MODEL_TENSOR.FFN_DOWN_SHEXP,
+        MODEL_TENSOR.FFN_GATE_SHEXP,
+        MODEL_TENSOR.FFN_DOWN_EXP,
+        MODEL_TENSOR.FFN_UP_EXP,
+        MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_GATE_UP_EXP,
+        MODEL_TENSOR.SSM_A,
+        MODEL_TENSOR.SSM_CONV1D,
+        MODEL_TENSOR.SSM_DT,
+        MODEL_TENSOR.SSM_NORM,
+        MODEL_TENSOR.SSM_BETA,
+        MODEL_TENSOR.SSM_ALPHA,
+        MODEL_TENSOR.SSM_OUT,
+    ],
+    MODEL_ARCH.QWEN2VL: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.QWEN3VL: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_Q_NORM, MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_K_NORM,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.QWEN3VLMOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_Q_NORM,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_K_NORM, MODEL_TENSOR.ATTN_V,
+        MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE_INP,
+        MODEL_TENSOR.FFN_GATE_EXP, MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.LLAMA4: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+        MODEL_TENSOR.FFN_GATE_EXP, MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+        MODEL_TENSOR.FFN_GATE_SHEXP, MODEL_TENSOR.FFN_DOWN_SHEXP, MODEL_TENSOR.FFN_UP_SHEXP,
+    ],
+    MODEL_ARCH.COHERE2: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V,
+        MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.GLM4: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_QKV, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP, MODEL_TENSOR.ATTN_NORM_2,
+    ],
+    MODEL_ARCH.GLM_DSA: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.ATTN_ROT_EMBD,
+        MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.GRANITE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.GRANITE_MOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.GRANITE_HYBRID: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.MISTRAL3: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.MIMO2: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.STEP35: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.FALCON_H1: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_NORM_2, MODEL_TENSOR.ATTN_QKV,
+        MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.MAMBA2: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.SSM_IN, MODEL_TENSOR.SSM_CONV1D,
+        MODEL_TENSOR.SSM_DT, MODEL_TENSOR.SSM_A, MODEL_TENSOR.SSM_D,
+        MODEL_TENSOR.SSM_NORM, MODEL_TENSOR.SSM_OUT,
+    ],
+    MODEL_ARCH.RWKV6: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.TOKEN_EMBD_NORM, MODEL_TENSOR.OUTPUT_NORM,
+        MODEL_TENSOR.OUTPUT, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_NORM_2,
+        MODEL_TENSOR.TIME_MIX_W1, MODEL_TENSOR.TIME_MIX_W2, MODEL_TENSOR.TIME_MIX_LERP_X,
+        MODEL_TENSOR.TIME_MIX_LERP_K, MODEL_TENSOR.TIME_MIX_LERP_V, MODEL_TENSOR.TIME_MIX_LERP_R,
+        MODEL_TENSOR.TIME_MIX_LERP_G, MODEL_TENSOR.TIME_MIX_LERP_W, MODEL_TENSOR.TIME_MIX_LERP_FUSED,
+        MODEL_TENSOR.TIME_MIX_FIRST, MODEL_TENSOR.TIME_MIX_DECAY, MODEL_TENSOR.TIME_MIX_DECAY_W1,
+        MODEL_TENSOR.TIME_MIX_DECAY_W2, MODEL_TENSOR.TIME_MIX_KEY, MODEL_TENSOR.TIME_MIX_VALUE,
+        MODEL_TENSOR.TIME_MIX_RECEPTANCE, MODEL_TENSOR.TIME_MIX_GATE, MODEL_TENSOR.TIME_MIX_LN,
+        MODEL_TENSOR.TIME_MIX_OUTPUT, MODEL_TENSOR.CHANNEL_MIX_LERP_K, MODEL_TENSOR.CHANNEL_MIX_LERP_R,
+        MODEL_TENSOR.CHANNEL_MIX_KEY, MODEL_TENSOR.CHANNEL_MIX_RECEPTANCE, MODEL_TENSOR.CHANNEL_MIX_VALUE,
+    ],
+    MODEL_ARCH.RWKV7: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.TOKEN_EMBD_NORM, MODEL_TENSOR.OUTPUT_NORM,
+        MODEL_TENSOR.OUTPUT, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_NORM_2,
+        MODEL_TENSOR.TIME_MIX_LERP_FUSED, MODEL_TENSOR.TIME_MIX_W0, MODEL_TENSOR.TIME_MIX_W1,
+        MODEL_TENSOR.TIME_MIX_W2, MODEL_TENSOR.TIME_MIX_A0, MODEL_TENSOR.TIME_MIX_A1,
+        MODEL_TENSOR.TIME_MIX_A2, MODEL_TENSOR.TIME_MIX_V0, MODEL_TENSOR.TIME_MIX_V1,
+        MODEL_TENSOR.TIME_MIX_V2, MODEL_TENSOR.TIME_MIX_G1, MODEL_TENSOR.TIME_MIX_G2,
+        MODEL_TENSOR.TIME_MIX_K_K, MODEL_TENSOR.TIME_MIX_K_A, MODEL_TENSOR.TIME_MIX_R_K,
+        MODEL_TENSOR.TIME_MIX_KEY, MODEL_TENSOR.TIME_MIX_VALUE, MODEL_TENSOR.TIME_MIX_RECEPTANCE,
+        MODEL_TENSOR.TIME_MIX_LN, MODEL_TENSOR.TIME_MIX_OUTPUT, MODEL_TENSOR.CHANNEL_MIX_LERP_K,
+        MODEL_TENSOR.CHANNEL_MIX_KEY, MODEL_TENSOR.CHANNEL_MIX_VALUE,
+    ],
+    MODEL_ARCH.ARWKV7: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.TOKEN_EMBD_NORM, MODEL_TENSOR.OUTPUT_NORM,
+        MODEL_TENSOR.OUTPUT, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.TIME_MIX_LERP_FUSED,
+        MODEL_TENSOR.TIME_MIX_W0, MODEL_TENSOR.TIME_MIX_W1, MODEL_TENSOR.TIME_MIX_W2,
+        MODEL_TENSOR.TIME_MIX_A0, MODEL_TENSOR.TIME_MIX_A1, MODEL_TENSOR.TIME_MIX_A2,
+        MODEL_TENSOR.TIME_MIX_V0, MODEL_TENSOR.TIME_MIX_V1, MODEL_TENSOR.TIME_MIX_V2,
+        MODEL_TENSOR.TIME_MIX_G1, MODEL_TENSOR.TIME_MIX_G2, MODEL_TENSOR.TIME_MIX_K_K,
+        MODEL_TENSOR.TIME_MIX_K_A, MODEL_TENSOR.TIME_MIX_R_K, MODEL_TENSOR.TIME_MIX_KEY,
+        MODEL_TENSOR.TIME_MIX_VALUE, MODEL_TENSOR.TIME_MIX_RECEPTANCE, MODEL_TENSOR.TIME_MIX_LN,
+        MODEL_TENSOR.TIME_MIX_OUTPUT, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.DEEPSEEK: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+        MODEL_TENSOR.FFN_GATE_EXP, MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.JAMBA: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.SSM_IN,
+        MODEL_TENSOR.SSM_CONV1D, MODEL_TENSOR.SSM_X, MODEL_TENSOR.SSM_DT,
+        MODEL_TENSOR.SSM_DT_NORM, MODEL_TENSOR.SSM_A, MODEL_TENSOR.SSM_B_NORM,
+        MODEL_TENSOR.SSM_C_NORM, MODEL_TENSOR.SSM_D, MODEL_TENSOR.SSM_OUT,
+        MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.OLMO2: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V,
+        MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.OLMOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V,
+        MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.EXAONE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.EXAONE4: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.EXAONE_MOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.CHAMELEON: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_QKV, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_OUT_NORM, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.WAVTOKENIZER_DEC: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT, MODEL_TENSOR.CONV1D,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_QKV, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.HUNYUAN_MOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.HUNYUAN_DENSE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.PLM: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.BAILINGMOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.NEMOTRON: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.NEMOTRON_H: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.NEMOTRON_H_MOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP, MODEL_TENSOR.MOE_LATENT_DOWN,
+        MODEL_TENSOR.MOE_LATENT_UP,
+    ],
+    MODEL_ARCH.PHIMOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FACTORS_LONG, MODEL_TENSOR.ROPE_FACTORS_SHORT, MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_QKV, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP, MODEL_TENSOR.FFN_DOWN_EXP,
+        MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.MINICPM3: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FACTORS_LONG, MODEL_TENSOR.ROPE_FACTORS_SHORT, MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_Q_A, MODEL_TENSOR.ATTN_Q_B, MODEL_TENSOR.ATTN_KV_A_MQA,
+        MODEL_TENSOR.ATTN_KV_B, MODEL_TENSOR.ATTN_Q_A_NORM, MODEL_TENSOR.ATTN_KV_A_NORM,
+        MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.JAIS2: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.MODERN_BERT: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.TOKEN_EMBD_NORM, MODEL_TENSOR.OUTPUT_NORM,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.ATTN_QKV,
+        MODEL_TENSOR.FFN_UP, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.CLS, MODEL_TENSOR.CLS_OUT, MODEL_TENSOR.CLS_NORM,
+    ],
+    MODEL_ARCH.NEO_BERT: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_QKV,
+        MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_DOWN,
+        MODEL_TENSOR.FFN_UP, MODEL_TENSOR.ENC_OUTPUT_NORM, MODEL_TENSOR.CLS, MODEL_TENSOR.CLS_OUT,
+    ],
+    MODEL_ARCH.NOMIC_BERT_MOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.TOKEN_EMBD_NORM, MODEL_TENSOR.TOKEN_TYPES,
+        MODEL_TENSOR.POS_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.ATTN_OUT_NORM,
+        MODEL_TENSOR.ATTN_QKV, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_DOWN,
+        MODEL_TENSOR.FFN_UP, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_DOWN_EXP,
+        MODEL_TENSOR.FFN_UP_EXP, MODEL_TENSOR.LAYER_OUT_NORM,
+    ],
+    MODEL_ARCH.JINA_BERT_V3: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.TOKEN_EMBD_NORM, MODEL_TENSOR.TOKEN_TYPES,
+        MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.ATTN_OUT_NORM, MODEL_TENSOR.ATTN_QKV,
+        MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP, MODEL_TENSOR.LAYER_OUT_NORM,
+    ],
+    MODEL_ARCH.LLADA: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.LLADA_MOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP, MODEL_TENSOR.FFN_DOWN_EXP,
+        MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.DREAM: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.PLAMO2: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_QKV,
+        MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.ATTN_Q_NORM, MODEL_TENSOR.ATTN_K_NORM,
+        MODEL_TENSOR.ATTN_POST_NORM, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP, MODEL_TENSOR.FFN_POST_NORM,
+        MODEL_TENSOR.SSM_IN, MODEL_TENSOR.SSM_CONV1D, MODEL_TENSOR.SSM_X,
+        MODEL_TENSOR.SSM_DT, MODEL_TENSOR.SSM_A, MODEL_TENSOR.SSM_D, MODEL_TENSOR.SSM_OUT,
+        MODEL_TENSOR.SSM_DT_NORM, MODEL_TENSOR.SSM_B_NORM, MODEL_TENSOR.SSM_C_NORM,
+    ],
+    MODEL_ARCH.PLAMO3: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_QKV, MODEL_TENSOR.ATTN_Q_NORM,
+        MODEL_TENSOR.ATTN_K_NORM, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.ATTN_POST_NORM,
+        MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP, MODEL_TENSOR.FFN_POST_NORM,
+    ],
+    MODEL_ARCH.GPT_OSS: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.KIMI_LINEAR: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+        MODEL_TENSOR.SSM_IN, MODEL_TENSOR.SSM_CONV1D_Q, MODEL_TENSOR.SSM_CONV1D_K,
+        MODEL_TENSOR.SSM_CONV1D_V, MODEL_TENSOR.SSM_F_A, MODEL_TENSOR.SSM_F_B,
+        MODEL_TENSOR.SSM_BETA, MODEL_TENSOR.SSM_G_A, MODEL_TENSOR.SSM_G_B,
+    ],
+    MODEL_ARCH.AFMOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.LFM2: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.A_ENC_EMBD_POS, MODEL_TENSOR.A_ENC_EMBD_NORM, MODEL_TENSOR.A_ENC_EMBD_TO_LOGITS,
+        MODEL_TENSOR.A_ENC_CONV1D, MODEL_TENSOR.A_PRE_NORM, MODEL_TENSOR.A_POST_NORM,
+        MODEL_TENSOR.A_ENC_ATTN_Q, MODEL_TENSOR.A_ENC_ATTN_K, MODEL_TENSOR.A_ENC_ATTN_V,
+        MODEL_TENSOR.A_ENC_INPUT_NORM, MODEL_TENSOR.A_ENC_OUTPUT, MODEL_TENSOR.A_ENC_OUTPUT_NORM,
+        MODEL_TENSOR.A_ENC_FFN_NORM, MODEL_TENSOR.A_ENC_FFN_UP, MODEL_TENSOR.A_ENC_FFN_GATE,
+        MODEL_TENSOR.A_ENC_FFN_DOWN, MODEL_TENSOR.A_ENC_FFN_UP_1, MODEL_TENSOR.A_ENC_FFN_NORM_1,
+        MODEL_TENSOR.A_ENC_FFN_GATE_1, MODEL_TENSOR.A_ENC_FFN_DOWN_1, MODEL_TENSOR.A_MMPROJ,
+        MODEL_TENSOR.A_MMPROJ_FC, MODEL_TENSOR.A_MM_NORM_PRE, MODEL_TENSOR.A_MM_NORM_MID,
+        MODEL_TENSOR.A_ENC_NORM_CONV, MODEL_TENSOR.A_ENC_LINEAR_POS, MODEL_TENSOR.A_ENC_POS_BIAS_U,
+        MODEL_TENSOR.A_ENC_POS_BIAS_V, MODEL_TENSOR.A_ENC_OUT, MODEL_TENSOR.A_ENC_CONV_DW,
+        MODEL_TENSOR.A_ENC_CONV_NORM, MODEL_TENSOR.A_ENC_CONV_PW1, MODEL_TENSOR.A_ENC_CONV_PW2,
+    ],
+    MODEL_ARCH.LFM2MOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_GATE_INP,
+        MODEL_TENSOR.FFN_GATE_EXP, MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+        MODEL_TENSOR.A_ENC_EMBD_POS, MODEL_TENSOR.A_ENC_EMBD_NORM, MODEL_TENSOR.A_ENC_EMBD_TO_LOGITS,
+        MODEL_TENSOR.A_ENC_CONV1D, MODEL_TENSOR.A_PRE_NORM, MODEL_TENSOR.A_POST_NORM,
+        MODEL_TENSOR.A_ENC_ATTN_Q, MODEL_TENSOR.A_ENC_ATTN_K, MODEL_TENSOR.A_ENC_ATTN_V,
+        MODEL_TENSOR.A_ENC_INPUT_NORM, MODEL_TENSOR.A_ENC_OUTPUT, MODEL_TENSOR.A_ENC_OUTPUT_NORM,
+        MODEL_TENSOR.A_ENC_FFN_NORM, MODEL_TENSOR.A_ENC_FFN_UP, MODEL_TENSOR.A_ENC_FFN_GATE,
+        MODEL_TENSOR.A_ENC_FFN_DOWN, MODEL_TENSOR.A_ENC_FFN_UP_1, MODEL_TENSOR.A_ENC_FFN_NORM_1,
+        MODEL_TENSOR.A_ENC_FFN_GATE_1, MODEL_TENSOR.A_ENC_FFN_DOWN_1, MODEL_TENSOR.A_MMPROJ,
+        MODEL_TENSOR.A_MMPROJ_FC, MODEL_TENSOR.A_MM_NORM_PRE, MODEL_TENSOR.A_MM_NORM_MID,
+        MODEL_TENSOR.A_ENC_NORM_CONV, MODEL_TENSOR.A_ENC_LINEAR_POS, MODEL_TENSOR.A_ENC_POS_BIAS_U,
+        MODEL_TENSOR.A_ENC_POS_BIAS_V, MODEL_TENSOR.A_ENC_OUT, MODEL_TENSOR.A_ENC_CONV_DW,
+        MODEL_TENSOR.A_ENC_CONV_NORM, MODEL_TENSOR.A_ENC_CONV_PW1, MODEL_TENSOR.A_ENC_CONV_PW2,
+    ],
+    MODEL_ARCH.MAINCODER: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.ARCEE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.SMALLTHINKER: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+        MODEL_TENSOR.FFN_GATE_EXP, MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.RND1: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.APERTUS: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.PANGU_EMBED: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.LLAMA_EMBED: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+        MODEL_TENSOR.FFN_GATE_EXP, MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.GEMMA_EMBEDDING: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT, MODEL_TENSOR.DENSE_2_OUT,
+        MODEL_TENSOR.DENSE_3_OUT, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_Q_NORM, MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_K_NORM,
+        MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP, MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_POST_NORM, MODEL_TENSOR.FFN_PRE_NORM, MODEL_TENSOR.FFN_POST_NORM,
+    ],
+    MODEL_ARCH.GEMMA3N: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT, MODEL_TENSOR.OUTPUT_NORM,
+        MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_Q_NORM, MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_K_NORM, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.FFN_GATE, MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+        MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_POST_NORM, MODEL_TENSOR.FFN_PRE_NORM,
+        MODEL_TENSOR.FFN_POST_NORM, MODEL_TENSOR.PER_LAYER_TOKEN_EMBD, MODEL_TENSOR.PER_LAYER_MODEL_PROJ,
+        MODEL_TENSOR.PER_LAYER_INP_GATE, MODEL_TENSOR.PER_LAYER_PROJ, MODEL_TENSOR.PER_LAYER_PROJ_NORM,
+        MODEL_TENSOR.PER_LAYER_POST_NORM, MODEL_TENSOR.ALTUP_PROJ, MODEL_TENSOR.ALTUP_UNEMBD_PROJ,
+        MODEL_TENSOR.ALTUP_CORRECT_COEF, MODEL_TENSOR.ALTUP_CORRECT_SCALE, MODEL_TENSOR.ALTUP_PREDICT_COEF,
+        MODEL_TENSOR.ALTUP_ROUTER, MODEL_TENSOR.ALTUP_ROUTER_NORM, MODEL_TENSOR.LAUREL_L,
+        MODEL_TENSOR.LAUREL_R, MODEL_TENSOR.LAUREL_POST_NORM,
+    ],
+    MODEL_ARCH.EUROBERT: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_Q, MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V,
+        MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_UP, MODEL_TENSOR.FFN_DOWN,
+    ],
+    MODEL_ARCH.PADDLEOCR: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_QKV, MODEL_TENSOR.ATTN_OUT, MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
+    MODEL_ARCH.GROVEMOE: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_GATE_INP, MODEL_TENSOR.FFN_GATE_EXP,
+        MODEL_TENSOR.FFN_DOWN_EXP, MODEL_TENSOR.FFN_UP_EXP,
+    ],
+    MODEL_ARCH.BITNET_B158: [
+        MODEL_TENSOR.TOKEN_EMBD, MODEL_TENSOR.OUTPUT_NORM, MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS, MODEL_TENSOR.ATTN_NORM, MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K, MODEL_TENSOR.ATTN_V, MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD, MODEL_TENSOR.FFN_NORM, MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN, MODEL_TENSOR.FFN_UP,
+    ],
 }
 
 # tensors that will not be serialized
