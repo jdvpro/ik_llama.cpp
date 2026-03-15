@@ -4428,90 +4428,25 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
 
     struct ggml_cgraph * gf = ggml_new_graph_custom(ctx0, llama_model_max_nodes(model, n_tokens), false);
 
-    delta_net delta(lctx, batch);
-
     const int64_t n_embd_head = hparams.n_embd_head_v;
     GGML_ASSERT(n_embd_head == hparams.n_embd_head_k);
 
-    ggml_tensor * inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
+    const int n_main_layers = n_layer - (int)hparams.nextn_predict_layers;
+
     ggml_tensor * inp_pos = build_inp_pos();
-    ggml_tensor * inp_out_ids = n_tokens > 1 ? build_inp_out_ids() : nullptr;
     ggml_tensor * KQ_mask = build_inp_KQ_mask();
-
-    lctx.inp_s_seq_qnext = ggml_new_tensor_2d(ctx0, GGML_TYPE_I32, 1, n_tokens);
-    cb(lctx.inp_s_seq_qnext, "inp_s_seq_qnext", -1);
-    ggml_set_input(lctx.inp_s_seq_qnext);
-
     float KQ_scale = hparams.f_attention_scale == 0.0f ? 1.0f / sqrtf(float(n_embd_head)) : hparams.f_attention_scale;
 
     ggml_tensor * cur = nullptr;
 
-    const int n_main_layers = n_layer - (int)hparams.nextn_predict_layers;
-
-    for (int il = 0; il < n_main_layers; ++il) {
-
-        GGML_ASSERT(model.layers[il].attn_norm != nullptr);
-        GGML_ASSERT(model.layers[il].attn_post_norm != nullptr);
-
-        const bool has_moe = model.layers[il].ffn_gate_inp != nullptr;
-        const bool has_dense = model.layers[il].ffn_gate != nullptr &&
-                               model.layers[il].ffn_up != nullptr &&
-                               model.layers[il].ffn_down != nullptr;
-        GGML_ASSERT(has_moe || has_dense);
-        if (has_moe) {
-            GGML_ASSERT(model.layers[il].ffn_up_exps != nullptr);
-            GGML_ASSERT(model.layers[il].ffn_gate_exps != nullptr);
-            GGML_ASSERT(model.layers[il].ffn_down_exps != nullptr);
-        }
-
-
-        if (hparams.is_recurrent(il)) {
-            cur = delta.build_layer_attn_linear(ctx0, gf, inpL, il == n_main_layers - 1 ? inp_out_ids : nullptr, il, cb);
-        } else {
-            cur = build_std_attention(gf, model.layers[il].attn_norm, inpL, inp_pos, il == n_main_layers - 1 ? inp_out_ids : nullptr, nullptr,
-                    KQ_mask, nullptr, nullptr, KQ_scale, 0.0f, 0, il, true, false, true, false, false);
-        }
-
-        if (!model.layers[il].ffn_gate_inp) {
-            // dense FFN
-            cur = llm_build_ffn(ctx0, lctx, model.layers[il].ffn_norm, cur,
-                    model.layers[il].ffn_up,   nullptr, nullptr,
-                    model.layers[il].ffn_gate, nullptr, nullptr,
-                    model.layers[il].ffn_down, nullptr, nullptr,
-                    nullptr,
-                    LLM_FFN_SILU, LLM_FFN_PAR, cb, il, gf, true);
-            cb(cur, "ffn_out", il);
-        } else {
-            cur = llm_build_std_moe_ffn(ctx0, lctx, model.layers[il].ffn_norm, cur,
-                    model.layers[il].ffn_gate_inp,  nullptr,
-                    model.layers[il].ffn_up_exps,   nullptr,
-                    model.layers[il].ffn_gate_exps, nullptr,
-                    model.layers[il].ffn_down_exps, nullptr,
-                    nullptr,
-                    model.layers[il].ffn_up_shexp,    nullptr,
-                    model.layers[il].ffn_gate_shexp,  nullptr,
-                    model.layers[il].ffn_down_shexp,  nullptr,
-                    n_expert, n_expert_used,
-                    LLM_FFN_SILU, true, false, 0.0f,
-                    LLM_EXPERT_GATING_FUNC_SOFTMAX,
-                    LLM_FFN_SILU, cb, il, gf, true, model.layers[il].ffn_up_gate_exps, nullptr, model.layers[il].ffn_gate_inp_shexp);
-        }
-
-        cur = lctx.cvec.apply_to(ctx0, cur, il);
-        cb(cur, "l_out", il);
-
-        inpL = cur;
-    }
-
-    cur = build_output(lctx, ctx0, inpL, model.output, model.output_norm, cb);
-    cb(cur, "result_output", -1);
-
-    ggml_build_forward_expand(gf, cur);
-
-    // MTP (Multi-Token Prediction) tail
     if (cparams.mtp_op_type != MTP_OP_NONE && hparams.nextn_predict_layers > 0) {
-        // hidden_states from main model are passed as input
-        ggml_tensor * mtp_hidden = ggml_new_tensor_2d(ctx0, GGML_TYPE_F32, hparams.n_embd, n_tokens);
+        // === MTP-only path: build only the MTP tail ===
+        ggml_tensor * mtp_hidden;
+        if (cparams.mtp_op_type == MTP_OP_WARMUP || cparams.mtp_op_type == MTP_OP_UPDATE_ACCEPTED) {
+            mtp_hidden = ggml_new_tensor_2d(ctx0, GGML_TYPE_F32, hparams.n_embd, n_tokens);
+        } else {
+            mtp_hidden = ggml_new_tensor_1d(ctx0, GGML_TYPE_F32, hparams.n_embd);
+        }
         ggml_set_name(mtp_hidden, "result_embd_pooled");
         ggml_set_input(mtp_hidden);
         lctx.inp_mtp_states = mtp_hidden;
@@ -4537,7 +4472,7 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
             cur = build_std_attention(gf, mtp_layer.attn_norm, cur, inp_pos, nullptr, nullptr,
                     KQ_mask, nullptr, nullptr, KQ_scale, 0.0f, 0, il, true, false, true, false, false);
 
-            // 5. Decoder layer: MoE FFN (same architecture as main layers)
+            // 5. Decoder layer: MoE FFN
             GGML_ASSERT(mtp_layer.ffn_gate_inp != nullptr);
             cur = llm_build_std_moe_ffn(ctx0, lctx, mtp_layer.attn_post_norm, cur,
                     mtp_layer.ffn_gate_inp,  nullptr,
@@ -4553,20 +4488,83 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
                     LLM_EXPERT_GATING_FUNC_SOFTMAX,
                     LLM_FFN_SILU, cb, il, gf, true, mtp_layer.ffn_up_gate_exps, nullptr, mtp_layer.ffn_gate_inp_shexp);
 
-            // 6. Final norm
+            // 6. Final norm + output head (shared lm_head)
             cur = llm_build_norm(ctx0, cur, hparams, mtp_layer.nextn.shared_head_norm, NULL, LLM_NORM_RMS, cb, il);
-
-            // 7. Output head (shared lm_head)
             ggml_tensor * mtp_head = mtp_layer.nextn.shared_head_head ? mtp_layer.nextn.shared_head_head : model.output;
             cur = llm_build_lora_mm(lctx, ctx0, mtp_head, cur);
-            cb(cur, "result_output_mtp", il);
+            cb(cur, "result_output", -1);
 
-            ggml_build_forward_expand(gf, cur);
-
-            // For chaining multiple MTP layers: hidden for next iteration
             mtp_hidden = cur;
         }
+    } else {
+        // === Main model path ===
+        delta_net delta(lctx, batch);
+
+        ggml_tensor * inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
+        ggml_tensor * inp_out_ids = n_tokens > 1 ? build_inp_out_ids() : nullptr;
+
+        lctx.inp_s_seq_qnext = ggml_new_tensor_2d(ctx0, GGML_TYPE_I32, 1, n_tokens);
+        cb(lctx.inp_s_seq_qnext, "inp_s_seq_qnext", -1);
+        ggml_set_input(lctx.inp_s_seq_qnext);
+
+        for (int il = 0; il < n_main_layers; ++il) {
+
+            GGML_ASSERT(model.layers[il].attn_norm != nullptr);
+            GGML_ASSERT(model.layers[il].attn_post_norm != nullptr);
+
+            const bool has_moe = model.layers[il].ffn_gate_inp != nullptr;
+            const bool has_dense = model.layers[il].ffn_gate != nullptr &&
+                                   model.layers[il].ffn_up != nullptr &&
+                                   model.layers[il].ffn_down != nullptr;
+            GGML_ASSERT(has_moe || has_dense);
+            if (has_moe) {
+                GGML_ASSERT(model.layers[il].ffn_up_exps != nullptr);
+                GGML_ASSERT(model.layers[il].ffn_gate_exps != nullptr);
+                GGML_ASSERT(model.layers[il].ffn_down_exps != nullptr);
+            }
+
+            if (hparams.is_recurrent(il)) {
+                cur = delta.build_layer_attn_linear(ctx0, gf, inpL, il == n_main_layers - 1 ? inp_out_ids : nullptr, il, cb);
+            } else {
+                cur = build_std_attention(gf, model.layers[il].attn_norm, inpL, inp_pos, il == n_main_layers - 1 ? inp_out_ids : nullptr, nullptr,
+                        KQ_mask, nullptr, nullptr, KQ_scale, 0.0f, 0, il, true, false, true, false, false);
+            }
+
+            if (!model.layers[il].ffn_gate_inp) {
+                cur = llm_build_ffn(ctx0, lctx, model.layers[il].ffn_norm, cur,
+                        model.layers[il].ffn_up,   nullptr, nullptr,
+                        model.layers[il].ffn_gate, nullptr, nullptr,
+                        model.layers[il].ffn_down, nullptr, nullptr,
+                        nullptr,
+                        LLM_FFN_SILU, LLM_FFN_PAR, cb, il, gf, true);
+                cb(cur, "ffn_out", il);
+            } else {
+                cur = llm_build_std_moe_ffn(ctx0, lctx, model.layers[il].ffn_norm, cur,
+                        model.layers[il].ffn_gate_inp,  nullptr,
+                        model.layers[il].ffn_up_exps,   nullptr,
+                        model.layers[il].ffn_gate_exps, nullptr,
+                        model.layers[il].ffn_down_exps, nullptr,
+                        nullptr,
+                        model.layers[il].ffn_up_shexp,    nullptr,
+                        model.layers[il].ffn_gate_shexp,  nullptr,
+                        model.layers[il].ffn_down_shexp,  nullptr,
+                        n_expert, n_expert_used,
+                        LLM_FFN_SILU, true, false, 0.0f,
+                        LLM_EXPERT_GATING_FUNC_SOFTMAX,
+                        LLM_FFN_SILU, cb, il, gf, true, model.layers[il].ffn_up_gate_exps, nullptr, model.layers[il].ffn_gate_inp_shexp);
+            }
+
+            cur = lctx.cvec.apply_to(ctx0, cur, il);
+            cb(cur, "l_out", il);
+
+            inpL = cur;
+        }
+
+        cur = build_output(lctx, ctx0, inpL, model.output, model.output_norm, cb);
+        cb(cur, "result_output", -1);
     }
+
+    ggml_build_forward_expand(gf, cur);
 
     return gf;
 }
