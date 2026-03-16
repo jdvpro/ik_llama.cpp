@@ -4451,6 +4451,8 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
         ggml_set_input(mtp_hidden);
         lctx.inp_mtp_states = mtp_hidden;
 
+        ggml_tensor * inp_out_ids = build_inp_out_ids();
+
         for (uint32_t mtp_i = 0; mtp_i < hparams.nextn_predict_layers; ++mtp_i) {
             const int il = n_main_layers + mtp_i;
             const auto & mtp_layer = model.layers[il];
@@ -4469,7 +4471,7 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
             cur = llm_build_lora_mm(lctx, ctx0, mtp_layer.nextn.eh_proj, combined);
 
             // 4. Decoder layer: attention
-            cur = build_std_attention(gf, mtp_layer.attn_norm, cur, inp_pos, nullptr, nullptr,
+            cur = build_std_attention(gf, mtp_layer.attn_norm, cur, inp_pos, inp_out_ids, nullptr,
                     KQ_mask, nullptr, nullptr, KQ_scale, 0.0f, 0, il, true, false, true, false, false);
 
             // 5. Decoder layer: MoE FFN
