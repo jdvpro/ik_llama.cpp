@@ -1143,19 +1143,22 @@ std::vector<llama_token> mtp_speculative_gen_draft(
         common_batch_add(mtp_batch, current_input_id, current_n_past, {seq_id}, true);
 
         if (llama_decode(ctx, mtp_batch) != 0) {
+            LOG_DBG("[MTP-DRAFT] decode failed at step %d\n", i);
             break;
         }
 
-        common_sampler_sample(smpl, ctx, 0, true); 
-
-        const auto * cur_p = common_sampler_get_candidates(smpl, true);
-        
-        if (!cur_p || cur_p->size == 0) {
-            break;
+        // Greedy sample directly from logits for MTP draft
+        const float * logits = llama_get_logits(ctx);
+        const int n_vocab = llama_vocab_n_tokens(llama_model_get_vocab(llama_get_model(ctx)));
+        llama_token id_next = 0;
+        float max_logit = logits[0];
+        for (int j = 1; j < n_vocab; j++) {
+            if (logits[j] > max_logit) {
+                max_logit = logits[j];
+                id_next = j;
+            }
         }
-
-        const llama_token id_next = cur_p->data[0].id;
-        const float prob = cur_p->data[0].p;
+        const float prob = 1.0f; // greedy
 
         common_sampler_accept(smpl, nullptr, id_next, true);
 

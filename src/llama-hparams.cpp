@@ -468,7 +468,11 @@ void llm_load_hparams(
                 ml.get_key(LLM_KV_SSM_GROUP_COUNT,    hparams.ssm_n_group);
 
                 ml.get_key(LLM_KV_NEXTN_PREDICT_LAYERS, hparams.nextn_predict_layers, false);
-                hparams.n_layer_kv_from_start = hparams.n_layer - hparams.nextn_predict_layers;
+                if (model.mtp) {
+                    hparams.n_layer_kv_from_start = hparams.n_layer; // MTP layers need KV cache
+                } else {
+                    hparams.n_layer_kv_from_start = hparams.n_layer - hparams.nextn_predict_layers;
+                }
 
                 // Mark recurrent layers (linear attention); MTP layers use full attention
                 {

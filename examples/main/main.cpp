@@ -1,6 +1,7 @@
 #include "common.h"
 #include "chat.h"
 #include "console.h"
+#include "speculative.h"
 #include "llama.h"
 #include <cassert>
 #include <cinttypes>
@@ -528,6 +529,16 @@ int main(int argc, char ** argv) {
     int n_session_consumed = 0;
     int n_past_guidance    = 0;
 
+    // MTP speculative decoding state
+    const bool use_mtp = params.has_mtp && llama_model_n_nextn_layer(model) > 0;
+    int mtp_n_drafted  = 0;
+    int mtp_n_accepted = 0;
+    common_sampler * mtp_smpl = nullptr;
+    if (use_mtp) {
+        mtp_smpl = common_sampler_init(model, sparams);
+        LOG_TEE("MTP: enabled with %d prediction layer(s)\n", llama_model_n_nextn_layer(model));
+    }
+
     std::vector<int>   input_tokens;  g_input_tokens  = &input_tokens;
     std::vector<int>   output_tokens; g_output_tokens = &output_tokens;
     std::ostringstream output_ss;     g_output_ss     = &output_ss;
@@ -756,6 +767,62 @@ int main(int argc, char ** argv) {
             LOG("last: %s\n", LOG_TOKENS_TOSTR_PRETTY(ctx, ctx_sampling->prev).c_str());
 
             embd.push_back(id);
+
+            // MTP draft quality measurement
+            if (use_mtp) {
+                // Check if previous draft matched current sample
+                static llama_token mtp_last_draft = -1;
+                if (mtp_last_draft >= 0) {
+                    mtp_n_drafted++;
+                    if (id == mtp_last_draft) {
+                        mtp_n_accepted++;
+                    }
+                    mtp_last_draft = -1;
+                }
+
+                // Save hidden state before MTP operations
+                const int n_embd = llama_model_n_embd(model);
+                const float * emb = llama_get_embeddings_ith(ctx, -1);
+                static std::vector<float> saved_hidden;
+                if (emb) {
+                    saved_hidden.assign(emb, emb + n_embd);
+                }
+
+                // Warmup MTP KV cache on first generation
+                static bool mtp_warmed_up = false;
+                if (!mtp_warmed_up && emb) {
+                    llama_batch warmup_batch = llama_batch_init(n_past, 0, 1);
+                    for (int i = 0; i < n_past; ++i) {
+                        common_batch_add(warmup_batch, i < (int)embd_inp.size() ? embd_inp[i] : id, i, {0}, true);
+                    }
+                    mtp_update_kv_cache(ctx, warmup_batch, true);
+                    llama_batch_free(warmup_batch);
+                    mtp_warmed_up = true;
+                }
+
+                // Generate draft using saved hidden state, then update MTP KV cache
+                if (!saved_hidden.empty() && n_remain > 1) {
+                    llama_set_draft_input_hidden_state(ctx, saved_hidden.data());
+                    std::vector<llama_token> drafts = mtp_speculative_gen_draft(
+                        mtp_smpl, ctx, 1, 0.0f, id, n_past, 0);
+                    if (!drafts.empty()) {
+                        mtp_last_draft = drafts[0];
+                    }
+                    // Restore hidden state and update MTP KV cache
+                    // We need to write saved_hidden into lctx.embd before calling mtp_accept_tokens
+                    // Since we can't do that directly, use the draft_input_hidden_state path
+                    // by doing a manual MTP update
+                    llama_set_draft_input_hidden_state(ctx, saved_hidden.data());
+                    {
+                        llama_batch acc_batch = llama_batch_init(1, 0, 1);
+                        common_batch_add(acc_batch, id, n_past - 1, {0}, true);
+                        llama_set_mtp_op_type(ctx, MTP_OP_UPDATE_ACCEPTED);
+                        llama_decode(ctx, acc_batch);
+                        llama_set_mtp_op_type(ctx, MTP_OP_NONE);
+                        llama_batch_free(acc_batch);
+                    }
+                }
+            }
 
             // echo this to console
             input_echo = true;
@@ -999,6 +1066,13 @@ int main(int argc, char ** argv) {
     }
 
     llama_print_timings(ctx);
+
+    if (use_mtp && mtp_n_drafted > 0) {
+        LOG_TEE("\nMTP stats: drafted = %d, accepted = %d, acceptance rate = %.1f%%\n",
+                mtp_n_drafted, mtp_n_accepted,
+                100.0f * mtp_n_accepted / mtp_n_drafted);
+    }
+
     write_logfile(ctx, params, model, input_tokens, output_ss.str(), output_tokens);
 
     if (ctx_guidance) { llama_free(ctx_guidance); }
@@ -1006,6 +1080,7 @@ int main(int argc, char ** argv) {
     llama_free_model(model);
 
     common_sampler_free(ctx_sampling);
+    if (mtp_smpl) { common_sampler_free(mtp_smpl); }
     llama_backend_free();
 
 #ifndef LOG_DISABLE_LOGS

@@ -3165,7 +3165,8 @@ static bool prepare_mtp_graph_inputs(struct llama_context & lctx) {
     const float * src = nullptr;
     if (lctx.cparams.mtp_op_type == MTP_OP_WARMUP || lctx.cparams.mtp_op_type == MTP_OP_UPDATE_ACCEPTED) {
         src = lctx.embd;
-    } else { 
+        if (!src) src = lctx.draft_input_hidden_state; // fallback when embd was overwritten
+    } else {
         src = lctx.draft_input_hidden_state;
     }
 
