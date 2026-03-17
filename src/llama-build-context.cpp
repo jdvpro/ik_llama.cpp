@@ -111,6 +111,8 @@ void llm_build_context::init() {
     lctx.inp_pos_bucket    = nullptr;
     lctx.inp_embd_enc      = nullptr;
     lctx.inp_KQ_mask_cross = nullptr;
+    lctx.inp_mtp_states    = nullptr;
+    lctx.inp_mtp_pos       = nullptr;
 }
 
 void llm_build_context::free() {
