@@ -4478,28 +4478,31 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
         cur = llm_build_norm(ctx0, cur, hparams, mtp_layer.attn_norm, NULL, LLM_NORM_RMS, cb, il);
         cb(cur, "attn_norm", il);
 
-        auto [Qcur, Kcur, Vcur] = llm_build_mul_mat_qkv(gf, cur,
-                nullptr, nullptr,
-                nullptr, nullptr,
-                mtp_layer.attn_q, nullptr,
-                mtp_layer.attn_k, nullptr,
-                mtp_layer.attn_v, nullptr,
-                mtp_layer.attn_q_norm, mtp_layer.attn_k_norm, 0.f, il);
+        auto [Qmtp, Kmtp, Vmtp, gate_mtp] = llm_build_mul_mat_qkv_gated(gf, cur,
+                mtp_layer.attn_q, mtp_layer.attn_k, mtp_layer.attn_v,
+                mtp_layer.attn_q_norm, mtp_layer.attn_k_norm, il);
 
         lctx.inp_mtp_pos = ggml_add(ctx0, inp_pos, ggml_new_i32(ctx0, 1));
         cb(lctx.inp_mtp_pos, "inp_mtp_pos", il);
 
-        Qcur = ggml_rope_ext(ctx0, ggml_reshape_3d(ctx0, Qcur, n_embd_head, hparams.n_head(), n_tokens), lctx.inp_mtp_pos, nullptr,
+        Qmtp = ggml_rope_ext(ctx0, Qmtp, lctx.inp_mtp_pos, nullptr,
                 n_rot, rope_type, n_ctx_orig, freq_base, freq_scale, ext_factor, attn_factor, beta_fast, beta_slow);
-        Kcur = ggml_rope_ext(ctx0, ggml_reshape_3d(ctx0, Kcur, n_embd_head, hparams.n_head_kv(), n_tokens), lctx.inp_mtp_pos, nullptr,
+        Kmtp = ggml_rope_ext(ctx0, Kmtp, lctx.inp_mtp_pos, nullptr,
                 n_rot, rope_type, n_ctx_orig, freq_base, freq_scale, ext_factor, attn_factor, beta_fast, beta_slow);
 
-        cb(Qcur, "Qcur", il);
-        cb(Kcur, "Kcur", il);
-        cb(Vcur, "Vcur", il);
+        cb(Qmtp, "Qmtp", il);
+        cb(Kmtp, "Kmtp", il);
+        cb(Vmtp, "Vmtp", il);
 
-        cur = llm_build_kv(ctx0, lctx, kv_self, gf, mtp_layer.attn_out, nullptr,
-                Kcur, Vcur, Qcur, KQ_mask, n_tokens, kv_head, n_kv, KQ_scale, cb, il);
+        cur = llm_build_kv(ctx0, lctx, kv_self, gf, nullptr, nullptr,
+                Kmtp, Vmtp, Qmtp, KQ_mask, n_tokens, kv_head, n_kv, KQ_scale, cb, il);
+
+        gate_mtp = ggml_sigmoid(ctx0, gate_mtp);
+        cb(gate_mtp, "gate_mtp", il);
+        cur = ggml_mul(ctx0, cur, gate_mtp);
+        cb(cur, "attn_gated", il);
+
+        cur = llm_build_lora_mm(lctx, ctx0, mtp_layer.attn_out, cur);
 
         cur = ggml_add(ctx0, cur, inpSA);
         cb(cur, "attn_with_inp", il);
