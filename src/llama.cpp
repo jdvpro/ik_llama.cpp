@@ -2439,6 +2439,90 @@ static int llama_model_load(const std::string & fname, llama_model & model, llam
         return -1;
     }
 
+#define MTP_AGENT_TEST
+#ifdef MTP_AGENT_TEST
+    if (model.arch == LLM_ARCH_QWEN3NEXT && !model.mtp_layers.empty()) {
+        fprintf(stderr, "\n=== MTP AGENT TEST ===\n");
+
+        llama_context_params cparams = llama_context_default_params();
+        cparams.n_batch = 1;
+        cparams.n_ctx = 8;
+        cparams.embeddings = true;
+        cparams.mtp_op_type = MTP_OP_NONE;
+
+        llama_context * ctx = llama_init_from_model(&model, cparams);
+        if (ctx) {
+            llama_token bos = llama_vocab_bos(&model.vocab);
+            llama_batch batch = llama_batch_get_one(&bos, 1, 0, 0);
+
+            if (llama_decode(ctx, batch) == 0) {
+                std::vector<float> main_embd(model.hparams.n_embd);
+                memcpy(main_embd.data(), ctx->embd, main_embd.size() * sizeof(float));
+
+                llama_set_mtp_op_type(ctx, MTP_OP_WARMUP);
+                llama_batch batch2 = llama_batch_get_one(&bos, 1, 1, 0);
+
+                memcpy(ctx->embd, main_embd.data(), main_embd.size() * sizeof(float));
+
+                if (llama_decode(ctx, batch2) == 0) {
+                    int n_vocab = model.hparams.n_vocab;
+                    float * logits = ctx->logits;
+
+                    float min_l = logits[0], max_l = logits[0];
+                    double sum_l = 0;
+                    bool has_nan_inf = false;
+
+                    std::vector<float> logits1(logits, logits + n_vocab);
+
+                    for (int i = 0; i < n_vocab; ++i) {
+                        float l = logits[i];
+                        if (std::isnan(l) || std::isinf(l)) has_nan_inf = true;
+                        if (l < min_l) min_l = l;
+                        if (l > max_l) max_l = l;
+                        sum_l += l;
+                    }
+                    float mean_l = sum_l / n_vocab;
+
+                    fprintf(stderr, "- Output shape: [1, %d]\n", n_vocab);
+                    fprintf(stderr, "- Min: %f, Max: %f, Mean: %f\n", min_l, max_l, mean_l);
+                    fprintf(stderr, "- Contains NaN/Inf: %s\n", has_nan_inf ? "yes" : "no");
+                    
+                    std::vector<std::pair<float, int>> top;
+                    for (int i = 0; i < n_vocab; ++i) {
+                        top.push_back({logits[i], i});
+                    }
+                    std::sort(top.begin(), top.end(), [](const auto & a, const auto & b) {
+                        return a.first > b.first;
+                    });
+
+                    fprintf(stderr, "- Top 5:\n");
+                    for (int i = 0; i < 5; ++i) {
+                        const char * text = llama_vocab_get_text(&model.vocab, top[i].second);
+                        fprintf(stderr, "    '%s' (%d) : %f\n", text ? text : "", top[i].second, top[i].first);
+                    }
+
+                    memcpy(ctx->embd, main_embd.data(), main_embd.size() * sizeof(float));
+                    llama_decode(ctx, batch2);
+
+                    float * logits2 = ctx->logits;
+                    bool identical = true;
+                    for (int i = 0; i < n_vocab; ++i) {
+                        if (std::abs(logits1[i] - logits2[i]) > 1e-4) {
+                            identical = false;
+                            break;
+                        }
+                    }
+
+                    fprintf(stderr, "- Result is identical to first run: %s\n", identical ? "yes" : "no");
+                }
+            }
+            llama_free(ctx);
+        }
+        fprintf(stderr, "Exiting...\n");
+        exit(0);
+    }
+#endif
+
     return 0;
 }
 
