@@ -16872,11 +16872,15 @@ static int ggml_compute_forward_mul_mat(
         }
     }
     if (dst->type == GGML_TYPE_F32) {
-        if (iqk_mul_mat_4d(ne01, ne11, ne00,
-                    ne02, ne03, ne12, ne13, nb02, nb03, nb12, nb13, nb2/sizeof(float), nb3/sizeof(float),
-                    src0->type, src0->data, nb01,
-                    src1->type, src1->data, nb11,
-                    (float *)dst->data, nb1/sizeof(float), ith, nth)) return node_n;
+        if (ith == 0 && (dst->data == NULL || src0->data == NULL || src1->data == NULL)) {
+            // printf("iqk_mul_mat_4d: skip compute due to NULL data (measure phase?)\n");
+        } else if (dst->data && src0->data && src1->data) {
+            if (iqk_mul_mat_4d(ne01, ne11, ne00,
+                        ne02, ne03, ne12, ne13, nb02, nb03, nb12, nb13, nb2/sizeof(float), nb3/sizeof(float),
+                        src0->type, src0->data, nb01,
+                        src1->type, src1->data, nb11,
+                        (float *)dst->data, nb1/sizeof(float), ith, nth)) return node_n;
+        }
     }
 #endif
 
