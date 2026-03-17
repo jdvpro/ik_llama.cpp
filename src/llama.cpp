@@ -2350,6 +2350,25 @@ static bool llm_load_tensors(
     // loading time will be recalculate after the first eval, so
     // we take page faults deferred by mmap() into consideration
     model.t_load_us = ggml_time_us() - model.t_start_us;
+
+    {
+        int total_tensors = 0;
+        for (const auto& it : model.tensors_by_name) {
+            total_tensors++;
+            if (it.first.find("mtp") != std::string::npos || it.first.find("nextn") != std::string::npos || it.first.find("blk.48.") != std::string::npos) {
+                auto t = it.second;
+                fprintf(stderr, "[MTP_TENSOR_LOG] name=%s, shape=[", it.first.c_str());
+                for (int i = 0; i < GGML_MAX_DIMS; ++i) {
+                    if (i > 0 && t->ne[i] == 1 && t->ne[i-1] == 1) continue; // skip trailing ones
+                    if (i > 0) fprintf(stderr, ", ");
+                    fprintf(stderr, "%d", (int)t->ne[i]);
+                }
+                fprintf(stderr, "], dtype=%s\n", ggml_type_name(t->type));
+            }
+        }
+        fprintf(stderr, "[MTP_TENSOR_LOG] Total downloaded tensors (all): %d\n", total_tensors);
+    }
+
     return true;
 }
 

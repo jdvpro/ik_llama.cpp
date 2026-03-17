@@ -135,6 +135,32 @@ struct llama_layer_nextn {
     struct ggml_tensor * shared_head_norm = nullptr;
 };
 
+struct llama_mtp_layer {
+    // fusion
+    struct ggml_tensor * hnorm = nullptr;              // pre_fc_norm_hidden
+    struct ggml_tensor * enorm = nullptr;              // pre_fc_norm_embedding
+    struct ggml_tensor * eh_proj = nullptr;            // [4096, 2048]
+    struct ggml_tensor * shared_head_norm = nullptr;   // финальная норма перед lm_head
+
+    // декодер-слой
+    struct ggml_tensor * attn_norm = nullptr;
+    struct ggml_tensor * post_attn_norm = nullptr;
+    struct ggml_tensor * attn_q = nullptr;
+    struct ggml_tensor * attn_k = nullptr;
+    struct ggml_tensor * attn_v = nullptr;
+    struct ggml_tensor * attn_out = nullptr;
+    struct ggml_tensor * attn_q_norm = nullptr;
+    struct ggml_tensor * attn_k_norm = nullptr;
+    struct ggml_tensor * ffn_gate_inp = nullptr;
+    struct ggml_tensor * ffn_gate_exps = nullptr;
+    struct ggml_tensor * ffn_up_exps = nullptr;
+    struct ggml_tensor * ffn_down_exps = nullptr;
+    struct ggml_tensor * ffn_gate_shexp = nullptr;
+    struct ggml_tensor * ffn_up_shexp = nullptr;
+    struct ggml_tensor * ffn_down_shexp = nullptr;
+    struct ggml_tensor * ffn_gate_inp_shexp = nullptr;
+};
+
 // TODO: separate into "llama_layer_enc" and "llama_layer_dec"
 struct llama_layer {
     // normalization
@@ -387,6 +413,7 @@ struct llama_model {
     llama_split_tensor split_output_norm;
 
     std::vector<llama_layer> layers;
+    std::vector<llama_mtp_layer> mtp_layers;
 
     llama_split_mode split_mode;
     int main_gpu;
