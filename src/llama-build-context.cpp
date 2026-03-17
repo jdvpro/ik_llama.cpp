@@ -4486,9 +4486,12 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
                 mtp_layer.attn_v, nullptr,
                 mtp_layer.attn_q_norm, mtp_layer.attn_k_norm, 0.f, il);
 
-        Qcur = ggml_rope_ext(ctx0, ggml_reshape_3d(ctx0, Qcur, n_embd_head, hparams.n_head(), n_tokens), inp_pos, nullptr,
+        lctx.inp_mtp_pos = ggml_add(ctx0, inp_pos, ggml_new_i32(ctx0, 1));
+        cb(lctx.inp_mtp_pos, "inp_mtp_pos", il);
+
+        Qcur = ggml_rope_ext(ctx0, ggml_reshape_3d(ctx0, Qcur, n_embd_head, hparams.n_head(), n_tokens), lctx.inp_mtp_pos, nullptr,
                 n_rot, rope_type, n_ctx_orig, freq_base, freq_scale, ext_factor, attn_factor, beta_fast, beta_slow);
-        Kcur = ggml_rope_ext(ctx0, ggml_reshape_3d(ctx0, Kcur, n_embd_head, hparams.n_head_kv(), n_tokens), inp_pos, nullptr,
+        Kcur = ggml_rope_ext(ctx0, ggml_reshape_3d(ctx0, Kcur, n_embd_head, hparams.n_head_kv(), n_tokens), lctx.inp_mtp_pos, nullptr,
                 n_rot, rope_type, n_ctx_orig, freq_base, freq_scale, ext_factor, attn_factor, beta_fast, beta_slow);
 
         cb(Qcur, "Qcur", il);

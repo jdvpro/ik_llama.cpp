@@ -2462,7 +2462,7 @@ static int llama_model_load(const std::string & fname, llama_model & model, llam
                 memcpy(main_embd.data(), ctx->embd, main_embd.size() * sizeof(float));
 
                 llama_set_mtp_op_type(ctx, MTP_OP_WARMUP);
-                llama_batch batch2 = llama_batch_get_one(&bos, 1, 1, 0);
+                llama_batch batch2 = llama_batch_get_one(&bos, 1, 0, 0);
 
                 memcpy(ctx->embd, main_embd.data(), main_embd.size() * sizeof(float));
 
