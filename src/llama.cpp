@@ -724,7 +724,7 @@ static bool llama_kv_cache_init(
 
     const struct llama_hparams & hparams = model.hparams;
 
-    const int64_t  n_layer = model.mtp ? hparams.n_layer
+    const int64_t  n_layer = (model.mtp || model.arch == LLM_ARCH_QWEN3NEXT) ? hparams.n_layer
                                   : hparams.n_layer - hparams.nextn_predict_layers;
 
     cache.has_shift = false;
@@ -2442,12 +2442,14 @@ static int llama_model_load(const std::string & fname, llama_model & model, llam
 #define MTP_AGENT_TEST
 #ifdef MTP_AGENT_TEST
     if (model.arch == LLM_ARCH_QWEN3NEXT && !model.mtp_layers.empty()) {
+        model.mtp = true;
         fprintf(stderr, "\n=== MTP AGENT TEST ===\n");
 
         llama_context_params cparams = llama_context_default_params();
         cparams.n_batch = 1;
         cparams.n_ctx = 8;
         cparams.embeddings = true;
+        cparams.mtp = true;
         cparams.mtp_op_type = MTP_OP_NONE;
 
         llama_context * ctx = llama_init_from_model(&model, cparams);
@@ -3646,15 +3648,16 @@ static int llama_decode_internal(
                 cparams.mtp_op_type != MTP_OP_UPDATE_ACCEPTED) {
                 ggml_backend_t backend_res = ggml_backend_sched_get_tensor_backend(lctx.sched, res);
                 GGML_ASSERT(backend_res != nullptr);
-                GGML_ASSERT(lctx.logits != nullptr);
 
-                float * logits_out = lctx.logits + n_outputs_prev*n_vocab;
-                const int32_t n_outputs_new = lctx.n_outputs;
+                if (lctx.logits != nullptr) {
+                    float * logits_out = lctx.logits + n_outputs_prev*n_vocab;
+                    const int32_t n_outputs_new = lctx.n_outputs;
 
-                if (n_outputs_new) {
-                    GGML_ASSERT( n_outputs_prev + n_outputs_new <= n_outputs);
-                    GGML_ASSERT((n_outputs_prev + n_outputs_new)*n_vocab <= (int64_t) lctx.logits_size);
-                    ggml_backend_tensor_get_async(backend_res, res, logits_out, 0, n_outputs_new*n_vocab*sizeof(float));
+                    if (n_outputs_new) {
+                        GGML_ASSERT( n_outputs_prev + n_outputs_new <= n_outputs);
+                        GGML_ASSERT((n_outputs_prev + n_outputs_new)*n_vocab <= (int64_t) lctx.logits_size);
+                        ggml_backend_tensor_get_async(backend_res, res, logits_out, 0, n_outputs_new*n_vocab*sizeof(float));
+                    }
                 }
             }
 #if IK_PRINT_TIMING
