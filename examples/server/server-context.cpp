@@ -12,6 +12,13 @@
 #include "mtmd-helper.h"
 
 #include <regex>
+#include <chrono>
+
+// MTP timing helpers
+static inline int64_t mtp_timer_us() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+}
 
 server_context::~server_context() {
     if (ctx) {
@@ -207,9 +214,18 @@ void server_context::init() {
 
                 params_base.speculative.type = COMMON_SPECULATIVE_TYPE_MTP;
 
+                // MTP can only predict nextn_layers tokens ahead
+                const int n_mtp_layers = llama_model_n_nextn_layer(model);
+                if (params_base.speculative.n_max > n_mtp_layers) {
+                    SRV_INF("capping speculative.n_max from %d to %d (number of MTP layers)\n",
+                            params_base.speculative.n_max, n_mtp_layers);
+                    params_base.speculative.n_max = n_mtp_layers;
+                }
+
                 slot.has_mtp = true;
                 slot.params.speculative.type = COMMON_SPECULATIVE_TYPE_MTP;
                 slot.params.speculative.n_min = 0;
+                slot.params.speculative.n_max = params_base.speculative.n_max;
 
                 slot.batch_spec = llama_batch_init(slot.params.speculative.n_max + 1, 0, 1);
                 SLT_DBG(slot, "batch_spec contains %d tokens\n", slot.batch_spec.n_tokens);
@@ -907,6 +923,14 @@ bool server_context::launch_slot_with_task(server_slot& slot, server_task& task)
     slot.params.speculative.n_min = std::min(slot.params.speculative.n_max, slot.params.speculative.n_min);
     slot.params.speculative.n_min = std::max(slot.params.speculative.n_min, 0);
     slot.params.speculative.n_max = std::max(slot.params.speculative.n_max, 0);
+
+    // Cap n_max to MTP layer count when using MTP speculative decoding
+    if (slot.has_mtp) {
+        const int n_mtp_layers = llama_model_n_nextn_layer(model);
+        if (slot.params.speculative.n_max > n_mtp_layers) {
+            slot.params.speculative.n_max = n_mtp_layers;
+        }
+    }
 
     slot.params.speculative.ngram_size_n = json_value(data, "speculative.ngram_size_n", defaults.speculative.ngram_size_n);
     slot.params.speculative.ngram_size_m = json_value(data, "speculative.ngram_size_m", defaults.speculative.ngram_size_m);
@@ -2715,7 +2739,14 @@ void server_context::add_sampled_tokens() {
                 }
             }
 
+            SLT_INF(slot, "[MTP-DIAG-DRAFT] cache_size=%zu, sampled=%d|%s, n_past=%d, pos_next=%d\n",
+                cached_text_tokens.size(), slot.sampled,
+                common_token_to_piece(ctx, slot.sampled, false).c_str(),
+                slot.n_past, (int)slot.cache_tokens.pos_next());
+            const int64_t t0_draft = mtp_timer_us();
             llama_tokens draft = common_speculative_draft(slot.spec, params_spec, cached_text_tokens, slot.sampled);
+            const int64_t t1_draft = mtp_timer_us();
+            SLT_INF(slot, "[MTP-TIMING] draft generation: %.2f ms\n", (t1_draft - t0_draft) / 1000.0);
 
             if (draft.size() > (size_t)n_draft_max) {
                 SLT_WRN(slot, "draft size %d exceeds max %d, truncating\n", (int)draft.size(), n_draft_max);
@@ -3258,6 +3289,8 @@ void server_context::extend_context(const int32_t n_tokens) {
 }
 
 void server_context::speculative_decoding_accept() {
+    const bool is_hybrid = llama_model_is_hybrid(model);
+
     for (auto& slot : slots) {
         if (slot.state != SLOT_STATE_PROCESSING || slot.i_batch_dft.empty()) {
             continue;
@@ -3267,23 +3300,76 @@ void server_context::speculative_decoding_accept() {
 
         // the accepted tokens from the speculation
         const auto ids = common_sampler_sample_and_accept_n(slot.ctx_sampling, ctx, slot.i_batch_dft, slot.drafted);
-        
+
+        // Log draft vs accepted for debugging MTP accuracy
+        if (slot.has_mtp && !ids.empty()) {
+            const auto * vocab = llama_model_get_vocab(llama_get_model(ctx));
+            std::string main_tok = common_token_to_piece(ctx, ids[0], false);
+            std::string draft_str, accepted_str;
+            for (size_t di = 0; di < slot.drafted.size(); di++) {
+                draft_str += " [" + std::to_string(slot.drafted[di]) + "|" + common_token_to_piece(ctx, slot.drafted[di], false) + "]";
+            }
+            for (size_t ai = 1; ai < ids.size(); ai++) {
+                accepted_str += " [" + std::to_string(ids[ai]) + "|" + common_token_to_piece(ctx, ids[ai], false) + "]";
+            }
+            SLT_INF(slot, "[MTP-DEBUG] main=%d|%s, drafted:%s, from_main:%s, match=%s\n",
+                ids[0], main_tok.c_str(), draft_str.c_str(), accepted_str.c_str(),
+                (ids.size() - 1 == n_draft) ? "YES" : "NO");
+        }
+
+        // Save MTP hidden state BEFORE any re-decode that might clobber lctx.embd
         if (slot.has_mtp) {
-            const int n_embd = llama_model_n_embd(llama_get_model(ctx)); 
-            if (!ids.empty()) {
-                const float* emb = llama_get_embeddings_ith(ctx, ids.size() - 1);
+            const int n_embd = llama_model_n_embd(llama_get_model(ctx));
+            if (!ids.empty() && ids.size() <= slot.i_batch_dft.size()) {
+                const int batch_idx = slot.i_batch_dft[ids.size() - 1];
+                const float* emb = llama_get_embeddings_ith(ctx, batch_idx);
                 if (emb) {
                     slot.mtp_hidden_state.resize(n_embd);
                     memcpy(slot.mtp_hidden_state.data(), emb, n_embd * sizeof(float));
                 }
-                }
-            else {
-                llama_set_draft_input_hidden_state(ctx, llama_get_embeddings_ith(ctx, 0));
             }
-            llama_set_draft_input_hidden_state(ctx, slot.mtp_hidden_state.data());
+        }
 
+        // Hybrid model: restore recurrent state on draft rejection + re-decode
+        if (is_hybrid) {
+            const bool all_accepted = (ids.size() - 1) == n_draft;
+            if (all_accepted) {
+                SLT_INF(slot, "[MTP-TIMING] all %zu drafts accepted, no restore needed\n", n_draft);
+            } else {
+                const int64_t t0_restore = mtp_timer_us();
+                llama_state_seq_restore_from_backup_recurrent(ctx, slot.id);
+                const int64_t t1_restore = mtp_timer_us();
+
+                // Re-decode the accepted token to advance recurrent state correctly
+                int32_t n_past_base = slot.n_past - ((int32_t)slot.drafted.size() + 1);
+                const auto & cached = slot.cache_tokens.get_text_tokens();
+                if (n_past_base >= 0 && n_past_base < (int32_t)cached.size()) {
+                    llama_batch re_batch = llama_batch_init(1, 0, 1);
+                    common_batch_add(re_batch, cached[n_past_base], n_past_base, {slot.id}, true);
+                    llama_decode(ctx, re_batch);
+                    llama_batch_free(re_batch);
+                }
+                const int64_t t2_restore = mtp_timer_us();
+                SLT_INF(slot, "[MTP-TIMING] rejection: restore=%.2f ms, re-decode=%.2f ms, total=%.2f ms\n",
+                    (t1_restore - t0_restore) / 1000.0,
+                    (t2_restore - t1_restore) / 1000.0,
+                    (t2_restore - t0_restore) / 1000.0);
+            }
+        }
+
+        if (slot.has_mtp) {
+            if (!slot.mtp_hidden_state.empty()) {
+                llama_set_draft_input_hidden_state(ctx, slot.mtp_hidden_state.data());
+            }
             int32_t n_past_base = slot.n_past - (slot.drafted.size() + 1);
+            SLT_INF(slot, "[MTP-DIAG] n_past=%d, drafted=%zu, n_past_base=%d, cache_tokens=%zu, ids=%zu, hidden_state_from_batch_idx=%d\n",
+                slot.n_past, slot.drafted.size(), n_past_base, slot.cache_tokens.n_tokens(),
+                ids.size(), (int)(ids.size() <= slot.i_batch_dft.size() ? slot.i_batch_dft[ids.size() - 1] : -1));
+            const int64_t t0_accept = mtp_timer_us();
             mtp_accept_tokens(ctx, ids, n_past_base, slot.id);
+            const int64_t t1_accept = mtp_timer_us();
+            SLT_INF(slot, "[MTP-TIMING] mtp_accept_tokens: %.2f ms, accepted=%zu/%zu\n",
+                (t1_accept - t0_accept) / 1000.0, ids.size() - 1, n_draft);
         }
 
         slot.i_batch_dft.clear();
@@ -3293,6 +3379,15 @@ void server_context::speculative_decoding_accept() {
         slot.n_decoded += ids.size();
         const int64_t t_current = ggml_time_us();
         slot.t_token_generation = std::max<int64_t>(1, t_current - slot.t_start_generation) / 1e3;
+
+        // Per-step MTP summary
+        {
+            const double elapsed_ms = slot.t_token_generation;
+            const double speed = elapsed_ms > 0 ? (slot.n_decoded * 1000.0 / elapsed_ms) : 0;
+            const double accept_rate = slot.n_draft_total > 0 ? (100.0 * (slot.n_draft_accepted + (ids.size() - 1)) / (slot.n_draft_total + n_draft)) : 0;
+            SLT_INF(slot, "[MTP-STEP] step=%d, +%zu tok, total=%d, elapsed=%.0fms, speed=%.1f t/s, accept=%.0f%%\n",
+                slot.n_decoded, ids.size(), slot.n_decoded, elapsed_ms, speed, accept_rate);
+        }
 
         // update how many tokens out of those tested were accepted
         slot.n_draft_accepted += ids.size() - 1;
@@ -3618,7 +3713,12 @@ void server_context::process_batch_tokens(int32_t & n_batch) {
             0, 0, 0, // unused
         };
 
+        const int64_t t0_decode = mtp_timer_us();
         const int ret = llama_decode(ctx, batch_view);
+        const int64_t t1_decode = mtp_timer_us();
+        if (params_base.has_mtp) {
+            SRV_INF("[MTP-TIMING] llama_decode(%d tok): %.2f ms\n", n_tokens, (t1_decode - t0_decode) / 1000.0);
+        }
         if (ret != 0) {
             if (n_batch == 1 || ret < 0) {
                 int user_cancel = -3;
@@ -3704,13 +3804,17 @@ void server_context::process_batch_tokens(int32_t & n_batch) {
 
             if (params_base.has_mtp && slot.n_decoded == 0) {
                 if (batch_view.n_seq_id[0] > 0 && batch_view.seq_id[0][0] == slot.id) {
-                    mtp_update_kv_cache(ctx, batch_view, true);
+                    // Save hidden state from main model BEFORE MTP warmup overwrites lctx.embd
                     const float* emb = llama_get_embeddings_ith(ctx, -1);
                     if (emb) {
                         const int n_embd = llama_model_n_embd(llama_get_model(ctx));
                         slot.mtp_hidden_state.resize(n_embd);
                         memcpy(slot.mtp_hidden_state.data(), emb, n_embd * sizeof(float));
                     }
+                    const int64_t t0_warmup = mtp_timer_us();
+                    mtp_update_kv_cache(ctx, batch_view, true);
+                    const int64_t t1_warmup = mtp_timer_us();
+                    SLT_INF(slot, "[MTP-TIMING] warmup (prompt): %.2f ms\n", (t1_warmup - t0_warmup) / 1000.0);
                 }
             }
             slot.n_decoded += 1;
@@ -3823,8 +3927,26 @@ void server_context::update_slots() {
     // make sure we're in the right embedding mode
     llama_set_embeddings(ctx, batch_type == 1);
 
+    // For hybrid models: fast in-tensor backup of recurrent state before spec batch
+    const bool is_hybrid = llama_model_is_hybrid(model);
+    if (is_hybrid) {
+        for (auto & slot : slots) {
+            if (slot.state == SLOT_STATE_PROCESSING && !slot.i_batch_dft.empty()) {
+                const int64_t t0_save = mtp_timer_us();
+                int32_t backup_slot = llama_state_seq_backup_recurrent(ctx, slot.id);
+                const int64_t t1_save = mtp_timer_us();
+                SLT_INF(slot, "[MTP-TIMING] backup recurrent (in-tensor, slot=%d): %.2f ms\n", backup_slot, (t1_save - t0_save) / 1000.0);
+            }
+        }
+    }
+
     // process the created batch of tokens
+    const int64_t t0_batch = mtp_timer_us();
     process_batch_tokens(n_batch); // Decode with batch
+    const int64_t t1_batch = mtp_timer_us();
+    if (is_hybrid) {
+        SRV_INF("[MTP-TIMING] process_batch_tokens: %.2f ms, n_tokens=%d\n", (t1_batch - t0_batch) / 1000.0, batch.n_tokens);
+    }
 
     LOG_VERBOSE("run slots completed", {});
 }

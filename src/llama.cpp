@@ -681,7 +681,12 @@ static inline uint32_t llama_kv_v_row_embd(
 }
 
 static inline uint32_t llama_qwen3next_state_slots(const llama_cparams & cparams, uint32_t kv_size) {
-    return std::min<uint32_t>(std::max<uint32_t>(1, cparams.n_seq_max), kv_size);
+    uint32_t n_slots = std::min<uint32_t>(std::max<uint32_t>(1, cparams.n_seq_max), kv_size);
+    // Reserve an extra slot for speculative decoding state backup (MTP)
+    if (cparams.mtp > 0 && n_slots + 1 <= kv_size) {
+        n_slots += 1;
+    }
+    return n_slots;
 }
 
 static inline uint32_t llama_kv_qnext_state_slots(const llama_kv_cache & cache) {
@@ -5769,6 +5774,146 @@ void llama_kv_cache_clear(struct llama_context * ctx) {
 bool llama_kv_cache_seq_rm(struct llama_context * ctx, llama_seq_id seq_id, llama_pos p0, llama_pos p1) {
     return llama_kv_cache_seq_rm(ctx->kv_self, seq_id, p0, p1);
 }
+
+size_t llama_state_seq_save_recurrent(struct llama_context * ctx, llama_seq_id seq_id, void * buf, size_t buf_size) {
+    const auto & kv = ctx->kv_self;
+    if (!llama_kv_has_qnext_state_storage(kv)) {
+        return 0;
+    }
+    if (!llama_kv_qnext_seq_id_in_range(kv, seq_id)) {
+        return 0;
+    }
+
+    // Calculate total size needed
+    size_t total_size = 0;
+    for (uint32_t il = 0; il < kv.s_l.size(); ++il) {
+        ggml_tensor * s = kv.s_l[il];
+        if (s == nullptr) continue;
+        const size_t row_size = s->ne[0] * ggml_type_size(s->type);
+        total_size += row_size;
+    }
+
+    if (buf == nullptr || buf_size < total_size) {
+        return total_size;
+    }
+
+    // Copy state data from GPU to buffer
+    uint8_t * dst = (uint8_t *)buf;
+    for (uint32_t il = 0; il < kv.s_l.size(); ++il) {
+        ggml_tensor * s = kv.s_l[il];
+        if (s == nullptr) continue;
+        const size_t row_size = s->ne[0] * ggml_type_size(s->type);
+        const size_t offset = (size_t)seq_id * row_size;
+        ggml_backend_tensor_get(s, dst, offset, row_size);
+        dst += row_size;
+    }
+
+    return total_size;
+}
+
+bool llama_state_seq_restore_recurrent(struct llama_context * ctx, llama_seq_id seq_id, const void * buf, size_t buf_size) {
+    const auto & kv = ctx->kv_self;
+    if (!llama_kv_has_qnext_state_storage(kv)) {
+        return false;
+    }
+    if (!llama_kv_qnext_seq_id_in_range(kv, seq_id)) {
+        return false;
+    }
+
+    const uint8_t * src = (const uint8_t *)buf;
+    size_t consumed = 0;
+    for (uint32_t il = 0; il < kv.s_l.size(); ++il) {
+        ggml_tensor * s = kv.s_l[il];
+        if (s == nullptr) continue;
+        const size_t row_size = s->ne[0] * ggml_type_size(s->type);
+        if (consumed + row_size > buf_size) {
+            LLAMA_LOG_ERROR("%s: buffer too small\n", __func__);
+            return false;
+        }
+        const size_t offset = (size_t)seq_id * row_size;
+        ggml_backend_tensor_set(s, src, offset, row_size);
+        src += row_size;
+        consumed += row_size;
+    }
+
+    return true;
+}
+
+// Fast in-tensor copy: copy recurrent state from seq_id slot to backup_slot within each tensor.
+// This avoids going through ggml_backend_tensor_get/set and external buffers.
+// Returns the backup slot index used, or -1 on failure.
+int32_t llama_state_seq_backup_recurrent(struct llama_context * ctx, llama_seq_id seq_id) {
+    const auto & kv = ctx->kv_self;
+    if (!llama_kv_has_qnext_state_storage(kv)) {
+        return -1;
+    }
+
+    const uint32_t n_state_slots = llama_kv_qnext_state_slots(kv);
+    if (n_state_slots < 2) {
+        LLAMA_LOG_ERROR("%s: no backup slot available (n_state_slots=%u)\n", __func__, n_state_slots);
+        return -1;
+    }
+
+    // Use the last slot as backup
+    const uint32_t backup_slot = n_state_slots - 1;
+
+    for (uint32_t il = 0; il < kv.s_l.size(); ++il) {
+        ggml_tensor * s = kv.s_l[il];
+        if (s == nullptr) continue;
+
+        const size_t row_size = s->ne[0] * ggml_type_size(s->type);
+        uint8_t * data = (uint8_t *)s->data;
+        if (data == nullptr) {
+            // Fallback to ggml API if tensor data is not directly accessible (non-CPU)
+            std::vector<uint8_t> tmp(row_size);
+            ggml_backend_tensor_get(s, tmp.data(), (size_t)seq_id * row_size, row_size);
+            ggml_backend_tensor_set(s, tmp.data(), (size_t)backup_slot * row_size, row_size);
+            continue;
+        }
+
+        const uint8_t * src = data + (size_t)seq_id * row_size;
+        uint8_t * dst = data + (size_t)backup_slot * row_size;
+        memcpy(dst, src, row_size);
+    }
+
+    return (int32_t)backup_slot;
+}
+
+// Fast in-tensor restore: copy recurrent state from backup_slot back to seq_id slot.
+bool llama_state_seq_restore_from_backup_recurrent(struct llama_context * ctx, llama_seq_id seq_id) {
+    const auto & kv = ctx->kv_self;
+    if (!llama_kv_has_qnext_state_storage(kv)) {
+        return false;
+    }
+
+    const uint32_t n_state_slots = llama_kv_qnext_state_slots(kv);
+    if (n_state_slots < 2) {
+        return false;
+    }
+
+    const uint32_t backup_slot = n_state_slots - 1;
+
+    for (uint32_t il = 0; il < kv.s_l.size(); ++il) {
+        ggml_tensor * s = kv.s_l[il];
+        if (s == nullptr) continue;
+
+        const size_t row_size = s->ne[0] * ggml_type_size(s->type);
+        uint8_t * data = (uint8_t *)s->data;
+        if (data == nullptr) {
+            std::vector<uint8_t> tmp(row_size);
+            ggml_backend_tensor_get(s, tmp.data(), (size_t)backup_slot * row_size, row_size);
+            ggml_backend_tensor_set(s, tmp.data(), (size_t)seq_id * row_size, row_size);
+            continue;
+        }
+
+        const uint8_t * src = data + (size_t)backup_slot * row_size;
+        uint8_t * dst = data + (size_t)seq_id * row_size;
+        memcpy(dst, src, row_size);
+    }
+
+    return true;
+}
+
 
 void llama_kv_cache_seq_cp(struct llama_context * ctx, llama_seq_id seq_id_src, llama_seq_id seq_id_dst, llama_pos p0, llama_pos p1) {
     if (seq_id_src == seq_id_dst) {

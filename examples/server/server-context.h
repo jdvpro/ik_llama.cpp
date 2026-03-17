@@ -146,6 +146,7 @@ struct server_slot {
 
     bool has_mtp = false;
     std::vector<float> mtp_hidden_state;
+    std::vector<uint8_t> saved_recurrent_state; // saved delta-net state for speculative rollback
 
     // speculative decoding stats
     int32_t n_draft_total = 0;      // Total draft tokens generated

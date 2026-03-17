@@ -773,6 +773,34 @@ extern "C" {
                        llama_pos   p0,
                        llama_pos   p1);
 
+    // Save the recurrent (qnext/delta-net) state for a given sequence id into a caller-provided buffer.
+    // Returns the number of bytes written, or 0 if the model has no recurrent state.
+    // If buf is NULL, returns the required buffer size.
+    LLAMA_API size_t llama_state_seq_save_recurrent(
+            struct llama_context * ctx,
+                    llama_seq_id   seq_id,
+                          void   * buf,
+                        size_t     buf_size);
+
+    // Restore the recurrent (qnext/delta-net) state for a given sequence id from a buffer.
+    // Returns true on success.
+    LLAMA_API bool llama_state_seq_restore_recurrent(
+            struct llama_context * ctx,
+                    llama_seq_id   seq_id,
+                    const void   * buf,
+                        size_t     buf_size);
+
+    // Fast in-tensor backup: copy recurrent state from seq_id to a reserved backup slot.
+    // Returns the backup slot index, or -1 on failure. Requires mtp > 0 (extra slot allocated).
+    LLAMA_API int32_t llama_state_seq_backup_recurrent(
+            struct llama_context * ctx,
+                    llama_seq_id   seq_id);
+
+    // Fast in-tensor restore: copy recurrent state from backup slot back to seq_id.
+    LLAMA_API bool llama_state_seq_restore_from_backup_recurrent(
+            struct llama_context * ctx,
+                    llama_seq_id   seq_id);
+
     // Copy all tokens that belong to the specified sequence to another sequence
     // Note that this does not allocate extra KV cache memory - it simply assigns the tokens to the new sequence
     // p0 < 0 : [0,  p1]
