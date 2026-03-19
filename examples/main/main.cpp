@@ -1,6 +1,7 @@
 #include "common.h"
 #include "chat.h"
 #include "console.h"
+#include "speculative.h"
 #include "llama.h"
 #include <cassert>
 #include <cinttypes>
@@ -533,6 +534,16 @@ int main(int argc, char ** argv) {
     std::ostringstream output_ss;     g_output_ss     = &output_ss;
     std::ostringstream assistant_ss; // for storing current assistant message, used in conversation mode
 
+    // MTP Step 5: draft token logging (mode 1 — no verification)
+    const bool mtp_enabled = params.has_mtp && llama_model_n_nextn_layer(model) > 0;
+    const int mtp_n_embd = mtp_enabled ? llama_model_n_embd(model) : 0;
+    bool mtp_warmup_done = false;
+    int mtp_step = 0;
+    int mtp_matches = 0;
+    int mtp_total = 0;
+    llama_token mtp_prev_draft = LLAMA_TOKEN_NULL; // draft from previous step, to compare with current main token
+    std::vector<float> mtp_hidden_state(mtp_n_embd); // saved hidden state for MTP draft gen
+
     // the first thing we will do is to output the prompt, so set color accordingly
     console::set_display(console::prompt);
     display = params.display_prompt;
@@ -724,6 +735,14 @@ int main(int argc, char ** argv) {
 
                 n_past += n_eval;
 
+                // MTP Step 5: save hidden state after each main model decode
+                if (mtp_enabled && mtp_warmup_done) {
+                    const float * emb = llama_get_embeddings_ith(ctx, -1);
+                    if (emb) {
+                        memcpy(mtp_hidden_state.data(), emb, mtp_n_embd * sizeof(float));
+                    }
+                }
+
                 LOG("n_past = %d\n", n_past);
                 // Display total tokens alongside total time
                 if (params.n_print > 0 && n_past % params.n_print == 0) {
@@ -751,11 +770,76 @@ int main(int argc, char ** argv) {
 
             const llama_token id = common_sampler_sample_legacy(ctx_sampling, ctx, ctx_guidance);
 
+            // MTP Step 5: warmup MTP KV cache after prompt processing (after sampling to preserve main logits)
+            if (mtp_enabled && !mtp_warmup_done) {
+                // Save hidden state from last prompt token BEFORE warmup
+                // (warmup changes n_outputs, making embeddings_ith invalid)
+                const float * emb = llama_get_embeddings_ith(ctx, -1);
+                if (emb) {
+                    memcpy(mtp_hidden_state.data(), emb, mtp_n_embd * sizeof(float));
+                }
+
+                // Build a batch matching the prompt tokens for MTP warmup
+                llama_batch warmup_batch = llama_batch_init(n_past, 0, 1);
+                for (int i = 0; i < n_past; i++) {
+                    common_batch_add(warmup_batch, embd_inp[i], i, {0}, true);
+                }
+                mtp_update_kv_cache(ctx, warmup_batch, /*is_prompt_warmup=*/true);
+                llama_batch_free(warmup_batch);
+                mtp_warmup_done = true;
+                LOG_TEE("[MTP] Warmup done for %d prompt tokens\n", n_past);
+            }
+
             common_sampler_accept(ctx_sampling, ctx, id, /* apply_grammar= */ true);
 
             LOG("last: %s\n", LOG_TOKENS_TOSTR_PRETTY(ctx, ctx_sampling->prev).c_str());
 
+            // MTP Step 5: check if previous MTP draft matches current main token
+            if (mtp_enabled && mtp_prev_draft != LLAMA_TOKEN_NULL) {
+                bool match = (mtp_prev_draft == id);
+                if (match) mtp_matches++;
+                mtp_total++;
+                std::string main_str = common_token_to_piece(ctx, id, false);
+                std::string draft_str = common_token_to_piece(ctx, mtp_prev_draft, false);
+                LOG_TEE("[step %d] main: \"%s\" | mtp0_draft: \"%s\" | mtp0_match: %s\n",
+                    mtp_step, main_str.c_str(), draft_str.c_str(), match ? "yes" : "no");
+                mtp_step++;
+            }
+
             embd.push_back(id);
+
+            // MTP Step 5: run MTP draft generation after each token
+            if (mtp_enabled && mtp_warmup_done) {
+                // Use saved hidden state for DRAFT_GEN
+                llama_set_draft_input_hidden_state(ctx, mtp_hidden_state.data());
+
+                // Run MTP with the just-sampled token to get a draft prediction
+                llama_batch mtp_batch = llama_batch_init(1, 0, 1);
+                common_batch_add(mtp_batch, id, n_past, {0}, true);
+                llama_set_mtp_op_type(ctx, MTP_OP_DRAFT_GEN);
+                if (llama_decode(ctx, mtp_batch) == 0) {
+                    // Get MTP logits and take argmax
+                    float * mtp_logits = llama_get_logits_ith(ctx, 0);
+                    if (mtp_logits) {
+                        const int n_vocab = llama_n_vocab(model);
+                        mtp_prev_draft = 0;
+                        float max_logit = mtp_logits[0];
+                        for (int v = 1; v < n_vocab; v++) {
+                            if (mtp_logits[v] > max_logit) {
+                                max_logit = mtp_logits[v];
+                                mtp_prev_draft = v;
+                            }
+                        }
+                    }
+                } else {
+                    mtp_prev_draft = LLAMA_TOKEN_NULL;
+                    LOG_TEE("[MTP] Draft generation failed\n");
+                }
+                llama_set_mtp_op_type(ctx, MTP_OP_NONE);
+                // Remove the MTP draft token from KV cache to avoid corruption
+                llama_kv_cache_seq_rm(ctx, 0, n_past, n_past + 1);
+                llama_batch_free(mtp_batch);
+            }
 
             // echo this to console
             input_echo = true;
@@ -991,6 +1075,15 @@ int main(int argc, char ** argv) {
             n_remain = params.n_predict;
             is_interacting = true;
         }
+    }
+
+    // MTP Step 5: print summary
+    if (mtp_enabled && mtp_total > 0) {
+        LOG_TEE("\n\n=== MTP Summary ===\n");
+        LOG_TEE("Generated text (main model): %s\n", output_ss.str().c_str());
+        LOG_TEE("MTP acceptance rate: %d/%d = %.1f%%\n", mtp_matches, mtp_total,
+            100.0f * mtp_matches / mtp_total);
+        LOG_TEE("===================\n\n");
     }
 
     if (!path_session.empty() && params.prompt_cache_all && !params.prompt_cache_ro) {
