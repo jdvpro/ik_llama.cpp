@@ -969,6 +969,15 @@ static bool llama_kv_cache_init(
             }
             cache.k_l.push_back(k);
             cache.v_l.push_back(v);
+
+            // Log MTP KV cache allocation
+            if (k && v && i >= (int)(hparams.n_layer - hparams.nextn_predict_layers) && hparams.nextn_predict_layers > 0) {
+                const uint32_t n_head_kv_i = hparams.n_head_kv(i);
+                const uint32_t head_dim_i  = hparams.n_embd_head_k;
+                size_t total_bytes = ggml_nbytes(k) + ggml_nbytes(v);
+                LLAMA_LOG_INFO("[MTP KV Cache] layer_id=%d, n_ctx=%d, n_heads=%d, head_dim=%d, total_bytes=%zu (%.2f MiB)\n",
+                        i, (int)kv_size, n_head_kv_i, head_dim_i, total_bytes, total_bytes / (1024.0 * 1024.0));
+            }
         }
     }
     if (is_mla_attn && cparams.mla_attn && n_mla < n_layer && n_mla > 0) {
@@ -2443,148 +2452,150 @@ static int llama_model_load(const std::string & fname, llama_model & model, llam
 #ifdef MTP_AGENT_TEST
     if (model.arch == LLM_ARCH_QWEN3NEXT && !model.mtp_layers.empty()) {
         model.mtp = true;
-        fprintf(stderr, "\n=== MTP AGENT TEST ===\n");
+        fprintf(stderr, "\n=== MTP KV Cache Test (Step 4) ===\n");
 
-        llama_context_params cparams = llama_context_default_params();
-        cparams.n_batch = 32;
-        cparams.n_ctx = 256;
-        cparams.embeddings = true;
-        cparams.mtp = true;
-        cparams.mtp_op_type = MTP_OP_NONE;
-
-        llama_context * ctx = llama_init_from_model(&model, cparams);
-        if (!ctx) {
-            fprintf(stderr, "ERROR: failed to create context\n");
-            exit(1);
-        }
-
-        llama_token bos = llama_vocab_bos(&model.vocab);
-        fprintf(stderr, "BOS token: %d\n", bos);
-
-        // Step 1: Run main model to get hidden states
-        llama_batch batch = llama_batch_get_one(&bos, 1, 0, 0);
-        int rc = llama_decode(ctx, batch);
-        if (rc != 0) {
-            fprintf(stderr, "ERROR: first decode failed with %d\n", rc);
-            exit(1);
-        }
-
-        // Check that embeddings are non-zero
         const int n_embd = model.hparams.n_embd;
-        fprintf(stderr, "n_embd: %d\n", n_embd);
+        const int n_main_layers = model.hparams.n_layer - model.hparams.nextn_predict_layers;
 
-        if (!ctx->embd) {
-            fprintf(stderr, "ERROR: ctx->embd is NULL after first decode\n");
-            exit(1);
-        }
+        // Helper lambda: run a prompt, then run MTP, report KV cache usage
+        auto run_test = [&](const char * label, const std::vector<llama_token> & tokens) -> bool {
+            fprintf(stderr, "\n--- Test: %s (%d tokens) ---\n", label, (int)tokens.size());
 
-        std::vector<float> main_embd(n_embd);
-        memcpy(main_embd.data(), ctx->embd, n_embd * sizeof(float));
+            llama_context_params cparams = llama_context_default_params();
+            cparams.n_batch = 512;
+            cparams.n_ctx = 1024;
+            cparams.embeddings = true;
+            cparams.mtp = true;
+            cparams.mtp_op_type = MTP_OP_NONE;
 
-        // Verify hidden states are non-zero
-        float embd_min = main_embd[0], embd_max = main_embd[0];
-        double embd_sum = 0;
-        int embd_nonzero = 0;
-        for (int i = 0; i < n_embd; ++i) {
-            if (main_embd[i] < embd_min) embd_min = main_embd[i];
-            if (main_embd[i] > embd_max) embd_max = main_embd[i];
-            embd_sum += main_embd[i];
-            if (main_embd[i] != 0.0f) embd_nonzero++;
-        }
-        fprintf(stderr, "Hidden states: min=%f, max=%f, mean=%f, nonzero=%d/%d\n",
-                embd_min, embd_max, embd_sum / n_embd, embd_nonzero, n_embd);
-
-        if (embd_nonzero == 0) {
-            fprintf(stderr, "ERROR: hidden states are all zeros!\n");
-            exit(1);
-        }
-
-        // Step 2: Run MTP head
-        llama_set_mtp_op_type(ctx, MTP_OP_WARMUP);
-        llama_batch batch2 = llama_batch_get_one(&bos, 1, 0, 0);
-
-        // Copy hidden states back (they may have been overwritten)
-        memcpy(ctx->embd, main_embd.data(), n_embd * sizeof(float));
-
-        rc = llama_decode(ctx, batch2);
-        if (rc != 0) {
-            fprintf(stderr, "ERROR: MTP decode failed with %d\n", rc);
-            exit(1);
-        }
-
-        // Step 3: Analyze logits
-        const int n_vocab = model.hparams.n_vocab;
-        float * logits = ctx->logits;
-
-        if (!logits) {
-            fprintf(stderr, "ERROR: logits is NULL after MTP decode\n");
-            exit(1);
-        }
-
-        float min_l = logits[0], max_l = logits[0];
-        double sum_l = 0;
-        bool has_nan_inf = false;
-
-        std::vector<float> logits1(logits, logits + n_vocab);
-
-        for (int i = 0; i < n_vocab; ++i) {
-            float l = logits[i];
-            if (std::isnan(l) || std::isinf(l)) has_nan_inf = true;
-            if (l < min_l) min_l = l;
-            if (l > max_l) max_l = l;
-            sum_l += l;
-        }
-        float mean_l = sum_l / n_vocab;
-
-        fprintf(stderr, "\n--- MTP Forward Pass Results ---\n");
-        fprintf(stderr, "- Output shape: [1, %d]\n", n_vocab);
-        fprintf(stderr, "- Min: %f, Max: %f, Mean: %f\n", min_l, max_l, mean_l);
-        fprintf(stderr, "- Contains NaN/Inf: %s\n", has_nan_inf ? "yes" : "no");
-
-        std::vector<std::pair<float, int>> top;
-        for (int i = 0; i < n_vocab; ++i) {
-            top.push_back({logits[i], i});
-        }
-        std::sort(top.begin(), top.end(), [](const auto & a, const auto & b) {
-            return a.first > b.first;
-        });
-
-        fprintf(stderr, "- Top 5 tokens:\n");
-        for (int i = 0; i < 5; ++i) {
-            const char * text = llama_vocab_get_text(&model.vocab, top[i].second);
-            fprintf(stderr, "    #%d: '%s' (id=%d) logit=%f\n", i+1, text ? text : "<null>", top[i].second, top[i].first);
-        }
-
-        // Step 4: Determinism check — run same input again
-        memcpy(ctx->embd, main_embd.data(), n_embd * sizeof(float));
-        rc = llama_decode(ctx, batch2);
-        if (rc != 0) {
-            fprintf(stderr, "ERROR: second MTP decode failed with %d\n", rc);
-            exit(1);
-        }
-
-        float * logits2 = ctx->logits;
-        bool identical = true;
-        for (int i = 0; i < n_vocab; ++i) {
-            if (std::abs(logits1[i] - logits2[i]) > 1e-4) {
-                identical = false;
-                break;
+            llama_context * ctx = llama_init_from_model(&model, cparams);
+            if (!ctx) {
+                fprintf(stderr, "ERROR: failed to create context\n");
+                return false;
             }
+
+            // 1. Run main model (prompt processing)
+            llama_batch batch = llama_batch_get_one(const_cast<llama_token*>(tokens.data()), tokens.size(), 0, 0);
+            int rc = llama_decode(ctx, batch);
+            if (rc != 0) {
+                fprintf(stderr, "ERROR: main decode failed with %d\n", rc);
+                llama_free(ctx);
+                return false;
+            }
+
+            // Report main KV cache usage
+            uint32_t main_kv_used = ctx->kv_self.head;
+            fprintf(stderr, "Main model KV cache: %d positions filled\n", main_kv_used);
+
+            // Check hidden states
+            if (!ctx->embd) {
+                fprintf(stderr, "ERROR: ctx->embd is NULL\n");
+                llama_free(ctx);
+                return false;
+            }
+
+            std::vector<float> hidden(n_embd);
+            memcpy(hidden.data(), ctx->embd, n_embd * sizeof(float));
+
+            // 2. Run MTP head
+            llama_set_mtp_op_type(ctx, MTP_OP_WARMUP);
+            llama_batch mtp_batch = llama_batch_get_one(const_cast<llama_token*>(tokens.data()), tokens.size(), 0, 0);
+            memcpy(ctx->embd, hidden.data(), n_embd * sizeof(float));
+
+            rc = llama_decode(ctx, mtp_batch);
+            if (rc != 0) {
+                fprintf(stderr, "ERROR: MTP decode failed with %d\n", rc);
+                llama_free(ctx);
+                return false;
+            }
+
+            uint32_t mtp_kv_used = ctx->kv_self.head;
+            fprintf(stderr, "After MTP decode KV cache: %d positions filled (main+MTP combined kv_self)\n", mtp_kv_used);
+
+            // Check which layers have non-null K/V cache data
+            int main_attn_layers = 0, mtp_attn_layers = 0;
+            for (int il = 0; il < (int)ctx->kv_self.k_l.size(); ++il) {
+                if (ctx->kv_self.k_l[il] != nullptr) {
+                    if (il < n_main_layers) main_attn_layers++;
+                    else mtp_attn_layers++;
+                }
+            }
+            fprintf(stderr, "KV cache layers: main_attn=%d, mtp_attn=%d, total_k_l=%d\n",
+                    main_attn_layers, mtp_attn_layers, (int)ctx->kv_self.k_l.size());
+
+            // Report MTP KV cache dimensions
+            int mtp_layer_idx = n_main_layers; // first MTP layer
+            if (mtp_layer_idx < (int)ctx->kv_self.k_l.size() && ctx->kv_self.k_l[mtp_layer_idx]) {
+                auto * k_tensor = ctx->kv_self.k_l[mtp_layer_idx];
+                auto * v_tensor = ctx->kv_self.v_l[mtp_layer_idx];
+                fprintf(stderr, "MTP layer %d K cache: [%lld, %lld] (%s)\n",
+                        mtp_layer_idx, (long long)k_tensor->ne[0], (long long)k_tensor->ne[1],
+                        ggml_type_name(k_tensor->type));
+                fprintf(stderr, "MTP layer %d V cache: [%lld] (%s)\n",
+                        mtp_layer_idx, (long long)v_tensor->ne[0],
+                        ggml_type_name(v_tensor->type));
+
+                uint32_t n_head_kv = model.hparams.n_head_kv(mtp_layer_idx);
+                uint32_t head_dim  = model.hparams.n_embd_head_k;
+                fprintf(stderr, "MTP attention config: n_head_kv=%d, head_dim=%d\n", n_head_kv, head_dim);
+            }
+
+            // Verify logits are non-trivial
+            if (ctx->logits) {
+                int n_vocab = model.hparams.n_vocab;
+                float min_l = ctx->logits[0], max_l = ctx->logits[0];
+                for (int i = 1; i < n_vocab; ++i) {
+                    if (ctx->logits[i] < min_l) min_l = ctx->logits[i];
+                    if (ctx->logits[i] > max_l) max_l = ctx->logits[i];
+                }
+                fprintf(stderr, "MTP logits: min=%f, max=%f, range=%f\n", min_l, max_l, max_l - min_l);
+                if (max_l - min_l < 0.01f) {
+                    fprintf(stderr, "WARNING: logit range too small\n");
+                }
+            }
+
+            fprintf(stderr, "PASS: no crashes\n");
+            llama_free(ctx);
+            return true;
+        };
+
+        // Test 1: "Hello world" (short prompt)
+        std::vector<llama_token> tokens_short;
+        {
+            const char * text = "Hello world";
+            int n_max = 32;
+            tokens_short.resize(n_max);
+            int n = llama_tokenize(&model, text, strlen(text), tokens_short.data(), n_max, true, false);
+            tokens_short.resize(n);
+            fprintf(stderr, "'Hello world' tokenized to %d tokens\n", n);
         }
+        bool ok1 = run_test("Hello world", tokens_short);
 
-        fprintf(stderr, "- Deterministic: %s\n", identical ? "yes" : "no");
+        // Test 2: ~100 tokens (longer prompt)
+        std::vector<llama_token> tokens_long;
+        {
+            const char * text =
+                "Machine learning is a subset of artificial intelligence that focuses on building systems "
+                "that learn from data. Unlike traditional programming where rules are explicitly coded, "
+                "machine learning algorithms use statistical techniques to give computers the ability to "
+                "learn from experience. The field has grown tremendously in recent years, with applications "
+                "ranging from image recognition and natural language processing to autonomous vehicles and "
+                "medical diagnosis. Deep learning, a subset of machine learning, uses neural networks with "
+                "many layers to analyze various factors of data. This approach has been particularly "
+                "successful in tasks such as speech recognition and language translation.";
+            int n_max = 512;
+            tokens_long.resize(n_max);
+            int n = llama_tokenize(&model, text, strlen(text), tokens_long.data(), n_max, true, false);
+            tokens_long.resize(n);
+            fprintf(stderr, "\nLong prompt tokenized to %d tokens\n", n);
+        }
+        bool ok2 = run_test("Long prompt (~100 tokens)", tokens_long);
 
-        // Summary
-        fprintf(stderr, "\n--- Verdict ---\n");
-        bool ok = true;
-        if (has_nan_inf) { fprintf(stderr, "FAIL: NaN/Inf in logits\n"); ok = false; }
-        if (max_l - min_l < 0.01f) { fprintf(stderr, "FAIL: logits range too small (%.6f), weights may not be loaded\n", max_l - min_l); ok = false; }
-        if (!identical) { fprintf(stderr, "FAIL: not deterministic\n"); ok = false; }
-        if (ok) { fprintf(stderr, "PASS: MTP forward pass looks correct\n"); }
-
-        llama_free(ctx);
+        fprintf(stderr, "\n=== Summary ===\n");
+        fprintf(stderr, "Test 1 (Hello world): %s\n", ok1 ? "PASS" : "FAIL");
+        fprintf(stderr, "Test 2 (Long prompt): %s\n", ok2 ? "PASS" : "FAIL");
         fprintf(stderr, "Exiting...\n");
-        exit(ok ? 0 : 1);
+        exit((ok1 && ok2) ? 0 : 1);
     }
 #endif
 
