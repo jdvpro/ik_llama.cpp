@@ -2439,89 +2439,152 @@ static int llama_model_load(const std::string & fname, llama_model & model, llam
         return -1;
     }
 
-#define MTP_AGENT_TEST
+//#define MTP_AGENT_TEST
 #ifdef MTP_AGENT_TEST
     if (model.arch == LLM_ARCH_QWEN3NEXT && !model.mtp_layers.empty()) {
         model.mtp = true;
         fprintf(stderr, "\n=== MTP AGENT TEST ===\n");
 
         llama_context_params cparams = llama_context_default_params();
-        cparams.n_batch = 1;
-        cparams.n_ctx = 8;
+        cparams.n_batch = 32;
+        cparams.n_ctx = 256;
         cparams.embeddings = true;
         cparams.mtp = true;
         cparams.mtp_op_type = MTP_OP_NONE;
 
         llama_context * ctx = llama_init_from_model(&model, cparams);
-        if (ctx) {
-            llama_token bos = llama_vocab_bos(&model.vocab);
-            llama_batch batch = llama_batch_get_one(&bos, 1, 0, 0);
-
-            if (llama_decode(ctx, batch) == 0) {
-                std::vector<float> main_embd(model.hparams.n_embd);
-                memcpy(main_embd.data(), ctx->embd, main_embd.size() * sizeof(float));
-
-                llama_set_mtp_op_type(ctx, MTP_OP_WARMUP);
-                llama_batch batch2 = llama_batch_get_one(&bos, 1, 0, 0);
-
-                memcpy(ctx->embd, main_embd.data(), main_embd.size() * sizeof(float));
-
-                if (llama_decode(ctx, batch2) == 0) {
-                    int n_vocab = model.hparams.n_vocab;
-                    float * logits = ctx->logits;
-
-                    float min_l = logits[0], max_l = logits[0];
-                    double sum_l = 0;
-                    bool has_nan_inf = false;
-
-                    std::vector<float> logits1(logits, logits + n_vocab);
-
-                    for (int i = 0; i < n_vocab; ++i) {
-                        float l = logits[i];
-                        if (std::isnan(l) || std::isinf(l)) has_nan_inf = true;
-                        if (l < min_l) min_l = l;
-                        if (l > max_l) max_l = l;
-                        sum_l += l;
-                    }
-                    float mean_l = sum_l / n_vocab;
-
-                    fprintf(stderr, "- Output shape: [1, %d]\n", n_vocab);
-                    fprintf(stderr, "- Min: %f, Max: %f, Mean: %f\n", min_l, max_l, mean_l);
-                    fprintf(stderr, "- Contains NaN/Inf: %s\n", has_nan_inf ? "yes" : "no");
-                    
-                    std::vector<std::pair<float, int>> top;
-                    for (int i = 0; i < n_vocab; ++i) {
-                        top.push_back({logits[i], i});
-                    }
-                    std::sort(top.begin(), top.end(), [](const auto & a, const auto & b) {
-                        return a.first > b.first;
-                    });
-
-                    fprintf(stderr, "- Top 5:\n");
-                    for (int i = 0; i < 5; ++i) {
-                        const char * text = llama_vocab_get_text(&model.vocab, top[i].second);
-                        fprintf(stderr, "    '%s' (%d) : %f\n", text ? text : "", top[i].second, top[i].first);
-                    }
-
-                    memcpy(ctx->embd, main_embd.data(), main_embd.size() * sizeof(float));
-                    llama_decode(ctx, batch2);
-
-                    float * logits2 = ctx->logits;
-                    bool identical = true;
-                    for (int i = 0; i < n_vocab; ++i) {
-                        if (std::abs(logits1[i] - logits2[i]) > 1e-4) {
-                            identical = false;
-                            break;
-                        }
-                    }
-
-                    fprintf(stderr, "- Result is identical to first run: %s\n", identical ? "yes" : "no");
-                }
-            }
-            llama_free(ctx);
+        if (!ctx) {
+            fprintf(stderr, "ERROR: failed to create context\n");
+            exit(1);
         }
+
+        llama_token bos = llama_vocab_bos(&model.vocab);
+        fprintf(stderr, "BOS token: %d\n", bos);
+
+        // Step 1: Run main model to get hidden states
+        llama_batch batch = llama_batch_get_one(&bos, 1, 0, 0);
+        int rc = llama_decode(ctx, batch);
+        if (rc != 0) {
+            fprintf(stderr, "ERROR: first decode failed with %d\n", rc);
+            exit(1);
+        }
+
+        // Check that embeddings are non-zero
+        const int n_embd = model.hparams.n_embd;
+        fprintf(stderr, "n_embd: %d\n", n_embd);
+
+        if (!ctx->embd) {
+            fprintf(stderr, "ERROR: ctx->embd is NULL after first decode\n");
+            exit(1);
+        }
+
+        std::vector<float> main_embd(n_embd);
+        memcpy(main_embd.data(), ctx->embd, n_embd * sizeof(float));
+
+        // Verify hidden states are non-zero
+        float embd_min = main_embd[0], embd_max = main_embd[0];
+        double embd_sum = 0;
+        int embd_nonzero = 0;
+        for (int i = 0; i < n_embd; ++i) {
+            if (main_embd[i] < embd_min) embd_min = main_embd[i];
+            if (main_embd[i] > embd_max) embd_max = main_embd[i];
+            embd_sum += main_embd[i];
+            if (main_embd[i] != 0.0f) embd_nonzero++;
+        }
+        fprintf(stderr, "Hidden states: min=%f, max=%f, mean=%f, nonzero=%d/%d\n",
+                embd_min, embd_max, embd_sum / n_embd, embd_nonzero, n_embd);
+
+        if (embd_nonzero == 0) {
+            fprintf(stderr, "ERROR: hidden states are all zeros!\n");
+            exit(1);
+        }
+
+        // Step 2: Run MTP head
+        llama_set_mtp_op_type(ctx, MTP_OP_WARMUP);
+        llama_batch batch2 = llama_batch_get_one(&bos, 1, 0, 0);
+
+        // Copy hidden states back (they may have been overwritten)
+        memcpy(ctx->embd, main_embd.data(), n_embd * sizeof(float));
+
+        rc = llama_decode(ctx, batch2);
+        if (rc != 0) {
+            fprintf(stderr, "ERROR: MTP decode failed with %d\n", rc);
+            exit(1);
+        }
+
+        // Step 3: Analyze logits
+        const int n_vocab = model.hparams.n_vocab;
+        float * logits = ctx->logits;
+
+        if (!logits) {
+            fprintf(stderr, "ERROR: logits is NULL after MTP decode\n");
+            exit(1);
+        }
+
+        float min_l = logits[0], max_l = logits[0];
+        double sum_l = 0;
+        bool has_nan_inf = false;
+
+        std::vector<float> logits1(logits, logits + n_vocab);
+
+        for (int i = 0; i < n_vocab; ++i) {
+            float l = logits[i];
+            if (std::isnan(l) || std::isinf(l)) has_nan_inf = true;
+            if (l < min_l) min_l = l;
+            if (l > max_l) max_l = l;
+            sum_l += l;
+        }
+        float mean_l = sum_l / n_vocab;
+
+        fprintf(stderr, "\n--- MTP Forward Pass Results ---\n");
+        fprintf(stderr, "- Output shape: [1, %d]\n", n_vocab);
+        fprintf(stderr, "- Min: %f, Max: %f, Mean: %f\n", min_l, max_l, mean_l);
+        fprintf(stderr, "- Contains NaN/Inf: %s\n", has_nan_inf ? "yes" : "no");
+
+        std::vector<std::pair<float, int>> top;
+        for (int i = 0; i < n_vocab; ++i) {
+            top.push_back({logits[i], i});
+        }
+        std::sort(top.begin(), top.end(), [](const auto & a, const auto & b) {
+            return a.first > b.first;
+        });
+
+        fprintf(stderr, "- Top 5 tokens:\n");
+        for (int i = 0; i < 5; ++i) {
+            const char * text = llama_vocab_get_text(&model.vocab, top[i].second);
+            fprintf(stderr, "    #%d: '%s' (id=%d) logit=%f\n", i+1, text ? text : "<null>", top[i].second, top[i].first);
+        }
+
+        // Step 4: Determinism check — run same input again
+        memcpy(ctx->embd, main_embd.data(), n_embd * sizeof(float));
+        rc = llama_decode(ctx, batch2);
+        if (rc != 0) {
+            fprintf(stderr, "ERROR: second MTP decode failed with %d\n", rc);
+            exit(1);
+        }
+
+        float * logits2 = ctx->logits;
+        bool identical = true;
+        for (int i = 0; i < n_vocab; ++i) {
+            if (std::abs(logits1[i] - logits2[i]) > 1e-4) {
+                identical = false;
+                break;
+            }
+        }
+
+        fprintf(stderr, "- Deterministic: %s\n", identical ? "yes" : "no");
+
+        // Summary
+        fprintf(stderr, "\n--- Verdict ---\n");
+        bool ok = true;
+        if (has_nan_inf) { fprintf(stderr, "FAIL: NaN/Inf in logits\n"); ok = false; }
+        if (max_l - min_l < 0.01f) { fprintf(stderr, "FAIL: logits range too small (%.6f), weights may not be loaded\n", max_l - min_l); ok = false; }
+        if (!identical) { fprintf(stderr, "FAIL: not deterministic\n"); ok = false; }
+        if (ok) { fprintf(stderr, "PASS: MTP forward pass looks correct\n"); }
+
+        llama_free(ctx);
         fprintf(stderr, "Exiting...\n");
-        exit(0);
+        exit(ok ? 0 : 1);
     }
 #endif
 
@@ -3106,6 +3169,17 @@ static void llama_set_inputs(llama_context & lctx, const llama_batch & batch) {
         }
     }
 
+    if (lctx.inp_mtp_pos) {
+        const int64_t n_tokens = batch.n_tokens;
+
+        GGML_ASSERT(ggml_backend_buffer_is_host(lctx.inp_mtp_pos->buffer));
+        int32_t * data = (int32_t *) lctx.inp_mtp_pos->data;
+
+        for (int64_t j = 0; j < n_tokens; ++j) {
+            data[j] = batch.pos[j] + 1;
+        }
+    }
+
     if (lctx.inp_pos_bucket) {
         const int64_t n_tokens = batch.n_tokens;
 
@@ -3643,9 +3717,8 @@ static int llama_decode_internal(
 #if IK_PRINT_TIMING
             tim1 = ggml_time_us();
 #endif
-            // Do not process logits if MTP is only updating the KV cache.
-            if (cparams.mtp_op_type != MTP_OP_WARMUP &&
-                cparams.mtp_op_type != MTP_OP_UPDATE_ACCEPTED) {
+            // Do not process logits if MTP is only updating the KV cache (but not warmup — warmup may want logits).
+            if (cparams.mtp_op_type != MTP_OP_UPDATE_ACCEPTED) {
                 ggml_backend_t backend_res = ggml_backend_sched_get_tensor_backend(lctx.sched, res);
                 GGML_ASSERT(backend_res != nullptr);
 

@@ -4435,14 +4435,7 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
     const int64_t n_embd_head = hparams.n_embd_head_v;
     GGML_ASSERT(n_embd_head == hparams.n_embd_head_k);
 
-    ggml_tensor * inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
-    ggml_tensor * inp_pos = build_inp_pos();
-    ggml_tensor * inp_out_ids = n_tokens > 1 ? build_inp_out_ids() : nullptr;
     ggml_tensor * KQ_mask = build_inp_KQ_mask();
-
-    lctx.inp_s_seq_qnext = ggml_new_tensor_2d(ctx0, GGML_TYPE_I32, 1, n_tokens);
-    cb(lctx.inp_s_seq_qnext, "inp_s_seq_qnext", -1);
-    ggml_set_input(lctx.inp_s_seq_qnext);
 
     float KQ_scale = hparams.f_attention_scale == 0.0f ? 1.0f / sqrtf(float(n_embd_head)) : hparams.f_attention_scale;
 
@@ -4451,6 +4444,7 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
     const int n_main_layers = hparams.nextn_predict_layers > 0 ? n_layer - hparams.nextn_predict_layers : n_layer;
 
     if (cparams.mtp_op_type != MTP_OP_NONE) {
+        ggml_tensor * inp_out_ids = n_tokens > 1 ? build_inp_out_ids() : nullptr;
         ggml_tensor* hidden_states;
         if (cparams.mtp_op_type == MTP_OP_WARMUP || cparams.mtp_op_type == MTP_OP_UPDATE_ACCEPTED) {
             hidden_states = ggml_new_tensor_2d(ctx0, GGML_TYPE_F32, hparams.n_embd, n_tokens);
@@ -4484,8 +4478,9 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
                 mtp_layer.attn_q, mtp_layer.attn_k, mtp_layer.attn_v,
                 mtp_layer.attn_q_norm, mtp_layer.attn_k_norm, il);
 
-        lctx.inp_mtp_pos = ggml_add(ctx0, inp_pos, ggml_new_i32(ctx0, 1));
+        lctx.inp_mtp_pos = ggml_new_tensor_1d(ctx0, GGML_TYPE_I32, n_tokens);
         cb(lctx.inp_mtp_pos, "inp_mtp_pos", il);
+        ggml_set_input(lctx.inp_mtp_pos);
 
         Qmtp = ggml_rope_ext(ctx0, Qmtp, lctx.inp_mtp_pos, nullptr,
                 n_rot, rope_type, n_ctx_orig, freq_base, freq_scale, ext_factor, attn_factor, beta_fast, beta_slow);
@@ -4541,6 +4536,14 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
         cb(cur, "result_output", -1);
 
     } else {
+        ggml_tensor * inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
+        ggml_tensor * inp_pos = build_inp_pos();
+        ggml_tensor * inp_out_ids = n_tokens > 1 ? build_inp_out_ids() : nullptr;
+
+        lctx.inp_s_seq_qnext = ggml_new_tensor_2d(ctx0, GGML_TYPE_I32, 1, n_tokens);
+        cb(lctx.inp_s_seq_qnext, "inp_s_seq_qnext", -1);
+        ggml_set_input(lctx.inp_s_seq_qnext);
+
         for (int il = 0; il < n_main_layers; ++il) {
 
             GGML_ASSERT(model.layers[il].attn_norm != nullptr);
