@@ -147,6 +147,13 @@ struct server_slot {
     bool has_mtp = false;
     std::vector<float> mtp_hidden_state;
 
+    // MTP mode 1: draft logging without speculative decoding
+    bool mtp_warmup_done = false;
+    int mtp_step = 0;
+    int mtp_matches = 0;
+    int mtp_total = 0;
+    llama_token mtp_prev_draft = -1; // LLAMA_TOKEN_NULL
+
     // speculative decoding stats
     int32_t n_draft_total = 0;      // Total draft tokens generated
     int32_t n_draft_accepted = 0;   // Draft tokens actually accepted

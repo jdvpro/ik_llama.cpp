@@ -203,32 +203,26 @@ void server_context::init() {
 
         if (params_base.has_mtp) {
             if (llama_model_n_nextn_layer(model) > 0) {
-                SRV_INF("%s\n", "MTP detected, configuring for speculative decoding...");
-
-                params_base.speculative.type = COMMON_SPECULATIVE_TYPE_MTP;
+                SRV_INF("%s\n", "MTP detected, configuring mode 1 (draft logging, no speculative decoding)...");
 
                 slot.has_mtp = true;
-                slot.params.speculative.type = COMMON_SPECULATIVE_TYPE_MTP;
-                slot.params.speculative.n_min = 0;
 
-                slot.batch_spec = llama_batch_init(slot.params.speculative.n_max + 1, 0, 1);
-                SLT_DBG(slot, "batch_spec contains %d tokens\n", slot.batch_spec.n_tokens);
-
-                SRV_INF("%s\n", "MTP needs embeddings on decode, enabling");
-                llama_set_embeddings(ctx, true);
+                // Do NOT set up speculative decoding — mode 1 is observation-only
+                // The recurrent state (delta-net) gets corrupted when draft tokens are rejected,
+                // and proper backup/restore is not yet implemented for this model.
+                params_base.speculative.type = COMMON_SPECULATIVE_TYPE_NONE;
             }
             else {
-                SRV_WRN("%s\n", "MTP enabled via flag, but model has 0 NextN layers. Disabling speculative.");
-                params_base.speculative.type = COMMON_SPECULATIVE_TYPE_NONE;
+                SRV_WRN("%s\n", "MTP enabled via flag, but model has 0 NextN layers. Disabling.");
                 slot.has_mtp = false;
             }
         }
 
-        const bool can_spec = common_speculative_is_compat(ctx);
-        if (!can_spec) {
+        const bool can_spec = common_speculative_is_compat(ctx) && !slot.has_mtp;
+        if (!can_spec && !slot.has_mtp) {
             SRV_WRN("%s", "speculative decoding not supported by this context\n");
         }
-        // try speculative decoding
+        // try speculative decoding (skip for MTP mode 1 — no speculative decoding needed)
         if (can_spec) {
             slot.spec = common_speculative_init(params_base.speculative, slot.ctx);
             if (slot.spec) {
@@ -238,9 +232,7 @@ void server_context::init() {
                 }
                 SLT_INF(slot, "%s", "speculative decoding context initialized\n");
             } else {
-                if (slot.has_mtp) {
-                    SRV_ERR("%s", "failed to initialize MTP speculative context\n");
-                } else {
+                if (!slot.has_mtp) {
                     SLT_INF(slot, "%s", "speculative decoding context not initialized\n");
                 }
             }
@@ -380,6 +372,14 @@ void server_slot::reset() {
     // Reset speculative decoding stats
     n_draft_total = 0;
     n_draft_accepted = 0;
+
+    // Reset MTP mode 1 state
+    mtp_warmup_done = false;
+    mtp_step = 0;
+    mtp_matches = 0;
+    mtp_total = 0;
+    mtp_prev_draft = -1;
+    mtp_hidden_state.clear();
     chat_msg = {};
     json_schema = json();
     generated_tool_call_ids.clear();
@@ -427,7 +427,7 @@ void server_slot::add_token_string(const completion_token_output& token) {
 }
 
 bool server_slot::can_speculate() const {
-    return (!!spec || has_mtp);
+    return !!spec;
 }
 
 int server_slot::get_n_draft_max() const {
@@ -1850,6 +1850,13 @@ void server_context::send_final_response(server_slot& slot) {
     if (slot.oaicompat) {
         res->data["oaicompat_token_ctr"] = slot.n_decoded;
         res->data["model"] = slot.oaicompat_model;
+    }
+
+    // MTP mode 1: log summary
+    if (slot.has_mtp && slot.mtp_total > 0) {
+        float rate = 100.0f * slot.mtp_matches / slot.mtp_total;
+        SLT_INF(slot, "\n=== MTP Summary ===\nAcceptance rate: %d/%d = %.1f%%\n===================\n",
+            slot.mtp_matches, slot.mtp_total, rate);
     }
 
     queue_results.send(std::move(res));
@@ -3702,15 +3709,71 @@ void server_context::process_batch_tokens(int32_t & n_batch) {
 
             common_sampler_accept(slot.ctx_sampling, ctx, id, true);
 
-            if (params_base.has_mtp && slot.n_decoded == 0) {
-                if (batch_view.n_seq_id[0] > 0 && batch_view.seq_id[0][0] == slot.id) {
-                    mtp_update_kv_cache(ctx, batch_view, true);
-                    const float* emb = llama_get_embeddings_ith(ctx, -1);
+            // MTP mode 1: warmup + draft logging
+            if (slot.has_mtp) {
+                const int n_embd = llama_model_n_embd(llama_get_model(ctx));
+
+                if (!slot.mtp_warmup_done) {
+                    // Save hidden state BEFORE warmup (warmup changes n_outputs)
+                    const float* emb = llama_get_embeddings_ith(ctx, tok_idx);
                     if (emb) {
-                        const int n_embd = llama_model_n_embd(llama_get_model(ctx));
                         slot.mtp_hidden_state.resize(n_embd);
                         memcpy(slot.mtp_hidden_state.data(), emb, n_embd * sizeof(float));
                     }
+
+                    // Warmup MTP KV cache with prompt tokens
+                    mtp_update_kv_cache(ctx, batch_view, /*is_prompt_warmup=*/true);
+                    slot.mtp_warmup_done = true;
+                    SLT_INF(slot, "[MTP] Warmup done for %d prompt tokens\n", (int)batch_view.n_tokens);
+                } else {
+                    // Save hidden state from current main decode
+                    const float* emb = llama_get_embeddings_ith(ctx, tok_idx);
+                    if (emb) {
+                        slot.mtp_hidden_state.resize(n_embd);
+                        memcpy(slot.mtp_hidden_state.data(), emb, n_embd * sizeof(float));
+                    }
+                }
+
+                // Check if previous MTP draft matches current main token
+                if (slot.mtp_prev_draft != -1) {
+                    bool match = (slot.mtp_prev_draft == id);
+                    if (match) slot.mtp_matches++;
+                    slot.mtp_total++;
+                    std::string main_str = common_token_to_piece(ctx, id, false);
+                    std::string draft_str = common_token_to_piece(ctx, slot.mtp_prev_draft, false);
+                    SLT_INF(slot, "[step %d] main: \"%s\" | mtp0_draft: \"%s\" | mtp0_match: %s\n",
+                        slot.mtp_step, main_str.c_str(), draft_str.c_str(), match ? "yes" : "no");
+                    slot.mtp_step++;
+                }
+
+                // Run MTP draft generation
+                if (!slot.mtp_hidden_state.empty()) {
+                    llama_set_draft_input_hidden_state(ctx, slot.mtp_hidden_state.data());
+
+                    llama_batch mtp_batch = llama_batch_init(1, 0, 1);
+                    common_batch_add(mtp_batch, id, slot.n_past, {slot.id}, true);
+                    llama_set_mtp_op_type(ctx, MTP_OP_DRAFT_GEN);
+                    if (llama_decode(ctx, mtp_batch) == 0) {
+                        float * mtp_logits = llama_get_logits_ith(ctx, 0);
+                        if (mtp_logits) {
+                            const int n_vocab = llama_n_vocab(model);
+                            slot.mtp_prev_draft = 0;
+                            float max_logit = mtp_logits[0];
+                            for (int v = 1; v < n_vocab; v++) {
+                                if (mtp_logits[v] > max_logit) {
+                                    max_logit = mtp_logits[v];
+                                    slot.mtp_prev_draft = v;
+                                }
+                            }
+                        }
+                    } else {
+                        slot.mtp_prev_draft = -1;
+                        SLT_WRN(slot, "%s", "[MTP] Draft generation failed\n");
+                    }
+                    llama_set_mtp_op_type(ctx, MTP_OP_NONE);
+                    // Remove MTP draft entry from KV cache
+                    llama_kv_cache_seq_rm(ctx, slot.id, slot.n_past, slot.n_past + 1);
+                    llama_batch_free(mtp_batch);
                 }
             }
             slot.n_decoded += 1;
@@ -3754,15 +3817,7 @@ void server_context::process_batch_tokens(int32_t & n_batch) {
 
             slot.i_batch = -1;
         }
-        if (params_base.has_mtp) {
-            for (auto& slot : slots) {
-                if (slot.n_past < slot.n_prompt_tokens) { 
-                    if (batch_view.n_seq_id[0] > 0 && batch_view.seq_id[0][0] == slot.id) {
-                        mtp_update_kv_cache(ctx, batch_view, true);
-                    }
-                }
-            }
-        }
+        // Note: MTP warmup is now done inside the per-slot sampling loop above
         // speculative decoding - main model sample and accept
         speculative_decoding_accept();
     }
