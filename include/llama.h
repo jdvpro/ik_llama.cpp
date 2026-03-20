@@ -1500,6 +1500,12 @@ LLAMA_API struct llama_grammar* llama_sampler_init_grammar_lazy_patterns(
 
     LLAMA_API void llama_set_draft_input_hidden_state(struct llama_context * ctx, const float * hidden_state);
 
+    // Backup/restore recurrent (delta-net) state for speculative decoding rollback.
+    // Backup copies all s_l tensors to internal CPU-side buffers.
+    // Restore copies them back. Returns false if no recurrent state exists.
+    LLAMA_API bool llama_recurrent_state_backup(struct llama_context * ctx);
+    LLAMA_API bool llama_recurrent_state_restore(struct llama_context * ctx);
+
 #ifdef __cplusplus
 }
 #endif

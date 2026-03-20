@@ -233,4 +233,9 @@ struct llama_context {
     bool prepare_mtp_graph_inputs(
         struct llama_context & lctx);
     void set_mtp_op_type(llama_mtp_op_type value);
+
+    // Recurrent state backup for speculative decoding rollback (GPU-side)
+    struct ggml_context * s_l_backup_ctx = nullptr;
+    ggml_backend_buffer_t s_l_backup_buf = nullptr;
+    std::vector<struct ggml_tensor *> s_l_backup_tensors;
 };

@@ -657,6 +657,14 @@ llama_context::~llama_context() {
     }
 
     ggml_backend_buffer_free(buf_output);
+
+    // Free recurrent state backup
+    if (s_l_backup_buf) {
+        ggml_backend_buffer_free(s_l_backup_buf);
+    }
+    if (s_l_backup_ctx) {
+        ggml_free(s_l_backup_ctx);
+    }
 }
 
 //
@@ -3750,8 +3758,8 @@ static int llama_decode_internal(
 #endif
         }
 
-        // extract embeddings
-        if (embd && cparams.mtp_op_type == MTP_OP_NONE) {
+        // extract embeddings (also needed for DRAFT_GEN to chain iterative MTP steps)
+        if (embd && (cparams.mtp_op_type == MTP_OP_NONE || cparams.mtp_op_type == MTP_OP_DRAFT_GEN)) {
 #if IK_PRINT_TIMING
             tim1 = ggml_time_us();
 #endif
@@ -8756,5 +8764,75 @@ void llama_set_offload_policy(struct llama_context * lctx, int op, bool on_or_of
 
 void llama_set_draft_input_hidden_state(struct llama_context * ctx, const float * hidden_state) {
     ctx->draft_input_hidden_state = hidden_state;
+}
+
+bool llama_recurrent_state_backup(struct llama_context * ctx) {
+    auto & kv = ctx->kv_self;
+    if (kv.s_l.empty()) return false;
+
+    // Lazily allocate GPU-side backup tensors
+    if (ctx->s_l_backup_tensors.empty()) {
+        ctx->s_l_backup_tensors.resize(kv.s_l.size(), nullptr);
+
+        // Count total tensor overhead needed
+        size_t n_tensors = 0;
+        for (size_t il = 0; il < kv.s_l.size(); il++) {
+            if (kv.s_l[il] != nullptr) n_tensors++;
+        }
+        if (n_tensors == 0) return false;
+
+        struct ggml_init_params params = {
+            ggml_tensor_overhead() * n_tensors,
+            nullptr,
+            true, // no_alloc
+        };
+        ctx->s_l_backup_ctx = ggml_init(params);
+
+        for (size_t il = 0; il < kv.s_l.size(); il++) {
+            if (kv.s_l[il] == nullptr) continue;
+            ctx->s_l_backup_tensors[il] = ggml_dup_tensor(ctx->s_l_backup_ctx, kv.s_l[il]);
+        }
+
+        // Allocate buffer on same backend as the first s_l tensor
+        ggml_backend_buffer_type_t buft = nullptr;
+        for (size_t il = 0; il < kv.s_l.size(); il++) {
+            if (kv.s_l[il] != nullptr && kv.s_l[il]->buffer != nullptr) {
+                buft = ggml_backend_buffer_get_type(kv.s_l[il]->buffer);
+                break;
+            }
+        }
+        if (buft) {
+            ctx->s_l_backup_buf = ggml_backend_alloc_ctx_tensors_from_buft(ctx->s_l_backup_ctx, buft);
+        }
+        if (!ctx->s_l_backup_buf) {
+            LLAMA_LOG_ERROR("%s: failed to allocate GPU backup buffer for recurrent state\n", __func__);
+            return false;
+        }
+
+        LLAMA_LOG_INFO("%s: allocated GPU backup for %zu recurrent state tensors (%.1f MB)\n",
+            __func__, n_tensors,
+            (float)ggml_backend_buffer_get_size(ctx->s_l_backup_buf) / (1024.0f * 1024.0f));
+    }
+
+    // GPU-side copy: s_l -> backup (fast, device-to-device)
+    bool has_any = false;
+    for (size_t il = 0; il < kv.s_l.size(); il++) {
+        if (kv.s_l[il] == nullptr || ctx->s_l_backup_tensors[il] == nullptr) continue;
+        ggml_backend_tensor_copy(kv.s_l[il], ctx->s_l_backup_tensors[il]);
+        has_any = true;
+    }
+    return has_any;
+}
+
+bool llama_recurrent_state_restore(struct llama_context * ctx) {
+    auto & kv = ctx->kv_self;
+    if (ctx->s_l_backup_tensors.empty()) return false;
+
+    // GPU-side copy: backup -> s_l (fast, device-to-device)
+    for (size_t il = 0; il < kv.s_l.size(); il++) {
+        if (kv.s_l[il] == nullptr || ctx->s_l_backup_tensors[il] == nullptr) continue;
+        ggml_backend_tensor_copy(ctx->s_l_backup_tensors[il], kv.s_l[il]);
+    }
+    return true;
 }
 

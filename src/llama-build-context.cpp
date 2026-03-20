@@ -4451,7 +4451,7 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
         } else {
             hidden_states = ggml_new_tensor_1d(ctx0, GGML_TYPE_F32, hparams.n_embd);
         }
-        ggml_set_name(hidden_states, "result_embd_pooled");
+        ggml_set_name(hidden_states, "mtp_hidden_input");
         ggml_set_input(hidden_states);
 
         lctx.inp_mtp_states = hidden_states;
@@ -4528,6 +4528,7 @@ ggml_cgraph * llm_build_context::build_qwen3next() {
         cb(cur, "l_out", il);
 
         cur = llm_build_norm(ctx0, cur, hparams, mtp_layer.shared_head_norm, NULL, LLM_NORM_RMS, cb, il);
+        cb(cur, "result_norm", -1);  // post-shared_head_norm: for embedding extraction during DRAFT_GEN chaining
         if (inp_out_ids) {
             cur = ggml_get_rows(ctx0, cur, inp_out_ids);
         }
@@ -7493,7 +7494,7 @@ ggml_cgraph * llm_build_context::build_glm4_moe() {
         } else {
             hidden_states_from_main_model = ggml_new_tensor_1d(ctx0, GGML_TYPE_F32, hparams.n_embd);
         }
-        ggml_set_name(hidden_states_from_main_model, "result_embd_pooled");
+        ggml_set_name(hidden_states_from_main_model, "mtp_hidden_input");
         ggml_set_input(hidden_states_from_main_model);
 
         lctx.inp_mtp_states = hidden_states_from_main_model; 
@@ -7735,6 +7736,7 @@ struct ggml_tensor * llm_build_context::build_mtp_tail(
         cb(cur, "mtp_ffn_out_resid", il);
     }
     cur = llm_build_norm(ctx0, cur, hparams, mtp_layer.nextn.shared_head_norm, NULL, LLM_NORM_RMS, cb, il);
+    cb(cur, "result_norm", -1);  // post-shared_head_norm: for embedding extraction during DRAFT_GEN chaining
 
     if (inp_out_ids) {
         cur = ggml_get_rows(ctx0, cur, inp_out_ids);
