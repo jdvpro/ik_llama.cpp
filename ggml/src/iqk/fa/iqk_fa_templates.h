@@ -1154,9 +1154,12 @@ struct FlashQKV {
                 S += expf(s - fms.M[j]);
             }
         }
-        GGML_ASSERT(S > 0);
+        // Guard against empty slots when -np > 1 (S can be 0)
+        if (S <= 0) {
+            std::memset(qkv, 0, D*sizeof(float));
+            return;
+        }
         auto norm = F16::set1(1/S);
-        //auto norm = F16::set1(fms.S[j] > 0 ? 1/fms.S[j] : 0.f);
         for (int i = 0; i < D/F16::block_size; ++i) {
             auto r = F16::load(R + F16::block_size*i);
             F16::store(qkv + F16::block_size*i, F16::mul(norm, r));
@@ -1359,11 +1362,27 @@ void compute_helper(KHelper& kh, VHelper& vh, int nq1, int nk1, int stride_q, in
         KQHelper::convert(q_step, stride_q, q, q_f16);
 #endif
         auto mr = mask;
-        auto Mc = (const uint16_t *)(mr + (q_step - 1)*stride_m);
+        auto has_valid_k_block = [](const char * mr, int stride_m, int ik) {
+            for (int j = 0; j < q_step; ++j) {
+                auto Mc = (const uint16_t *)(mr + j*stride_m);
+                for (int l = 0; l < k_step; ++l) {
+                    if (Mc[ik + l] == 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
         int ik = nk1 - k_step;
-        for (; ik >=0 && Mc[ik] != 0; ik -= k_step);
+        for (; ik >=0 && !has_valid_k_block(mr, stride_m, ik); ik -= k_step);
         ik += k_step;
         for (int k1 = 0; k1 < ik/k_step; ++k1) {
+            if (!has_valid_k_block(mr, stride_m, 0)) {
+                kh.next_block(k_step);
+                vh.next_block(k_step);
+                mr += k_step*sizeof(ggml_half);
+                continue;
+            }
 #ifdef __aarch64__
             KQHelper::multiply_mask_kq(kh, Dk, stride_m, q_f16, mr, fms);
 #else
@@ -1424,11 +1443,27 @@ void compute_helper_q(KHelper& kh, VHelper& vh, int nq1, int nk1, int stride_q, 
             auto q8r = (typename HelperQ80R8<Dk>::block_q8 *)qptr;
             HelperQ80::convert<Dk>(q_step, stride_q, q, q8r);
             auto mr = mask;
-            auto Mc = (const uint16_t *)(mr + (q_step - 1)*stride_m);
+            auto has_valid_k_block = [](const char * mr, int stride_m, int ik) {
+                for (int j = 0; j < q_step; ++j) {
+                    auto Mc = (const uint16_t *)(mr + j*stride_m);
+                    for (int l = 0; l < k_step; ++l) {
+                        if (Mc[ik + l] == 0) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
             int ik = nk1 - k_step;
-            for (; ik >=0 && Mc[ik] != 0; ik -= k_step);
+            for (; ik >=0 && !has_valid_k_block(mr, stride_m, ik); ik -= k_step);
             ik += k_step;
             for (int k1 = 0; k1 < ik/k_step; ++k1) {
+                if (!has_valid_k_block(mr, stride_m, 0)) {
+                    kh.next_block(k_step);
+                    vh.next_block(k_step);
+                    mr += k_step*sizeof(ggml_half);
+                    continue;
+                }
                 HelperQ80R8<Dk>::repack(k_step, kh.block, kh.stride, q8r8);
                 KQHelper::mul_mask_kq(khr8, stride_m, q8r, mr, fms);
                 fqkv.accumulate_qkv(vh, fms);
@@ -1455,11 +1490,27 @@ void compute_helper_q(KHelper& kh, VHelper& vh, int nq1, int nk1, int stride_q, 
         perf.accum_nolock(0, t1);
 #endif
         auto mr = mask;
-        auto Mc = (const uint16_t *)(mr + (q_step - 1)*stride_m);
+        auto has_valid_k_block = [](const char * mr, int stride_m, int ik) {
+            for (int j = 0; j < q_step; ++j) {
+                auto Mc = (const uint16_t *)(mr + j*stride_m);
+                for (int l = 0; l < k_step; ++l) {
+                    if (Mc[ik + l] == 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
         int ik = nk1 - k_step;
-        for (; ik >=0 && Mc[ik] != 0; ik -= k_step);
+        for (; ik >=0 && !has_valid_k_block(mr, stride_m, ik); ik -= k_step);
         ik += k_step;
         for (int k1 = 0; k1 < ik/k_step; ++k1) {
+            if (!has_valid_k_block(mr, stride_m, 0)) {
+                kh.next_block(k_step);
+                vh.next_block(k_step);
+                mr += k_step*sizeof(ggml_half);
+                continue;
+            }
 #if FA_TIMING
             t1 = Perf::cur_time();
             KQHelper::mul_mask_kq(kh, stride_m, q8, mr, fms);
@@ -1977,11 +2028,27 @@ struct FlashAttnBF16 {
             perf.accum_nolock(0, t1);
 #endif
             auto mr = mask;
-            auto Mc = (const uint16_t *)(mr + (q_step - 1)*stride_m);
+            auto has_valid_k_block = [](const char * mr, int stride_m, int ik) {
+                for (int j = 0; j < q_step; ++j) {
+                    auto Mc = (const uint16_t *)(mr + j*stride_m);
+                    for (int l = 0; l < k_step; ++l) {
+                        if (Mc[ik + l] == 0) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
             int ik = nk1 - k_step;
-            for (; ik >=0 && Mc[ik] != 0; ik -= k_step);
+            for (; ik >=0 && !has_valid_k_block(mr, stride_m, ik); ik -= k_step);
             ik += k_step;
             for (int k1 = 0; k1 < ik/k_step; ++k1) {
+                if (!has_valid_k_block(mr, stride_m, 0)) {
+                    kh.next_block(k_step);
+                    vh.next_block(k_step);
+                    mr += k_step*sizeof(ggml_half);
+                    continue;
+                }
 #if FA_TIMING
                 //t1 = Perf::cur_time();
                 FlashQKbf16<Dk, q_step, k_step>::multiply_mask_kq(kh, stride_m, q_bf16, mr, fms, perf);
@@ -2249,4 +2316,3 @@ IQK_FA_CASE(iqk_fa_96_96);
 IQK_FA_CASE(iqk_fa_64_64);
 
 #endif
-

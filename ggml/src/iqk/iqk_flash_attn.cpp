@@ -167,6 +167,13 @@ extern "C" IQK_API bool iqk_flash_attn_noalibi(int type_q, int type_mask, float 
 
     if (type_q != 0 || type_mask != 1 || max_bias > 0) return false;
 
+    // Save original nek1 before any SWA/sparse-crop. Used in the GQA TG branch below
+    // so the per-thread work_buffer chunking matches iqk_fa_work_buffer_size(), which
+    // sizes work_data from the un-cropped K->ne[1]. Without this, crop can make nek1
+    // small enough that the chunking formula produces *more* nstep_k slots than the
+    // estimate (nk is a non-monotone function of nek1), and we overflow work_data.
+    const int original_nek1 = nek1;
+
     if (auto type_k = ggml_type(int_type_k_in), type_v = ggml_type(int_type_v); !are_kv_types_supported(type_k, type_v)) {
         if (ith == 0) {
             fprintf(stderr, "\n==================== K cache %s coupled with V cache %s is not a supported combination on the CPU backend.\n",
@@ -194,10 +201,25 @@ extern "C" IQK_API bool iqk_flash_attn_noalibi(int type_q, int type_mask, float 
         int nblock  = (ntokens + n_swa + kMinBatch - 1)/kMinBatch;
         int first   = nek1 - nblock*kMinBatch;
         if (first > 0) {
-            k = (const char *)k + int64_t(first)*stride_k;
-            v = (const char *)v + int64_t(first)*stride_v;
-            mask = (const uint16_t *)mask + first;
-            nek1 -= first;
+            // Only safe to drop the head when *no Q row* has a valid cell in [0, first).
+            // With -np>1 each Q row belongs to a different seq and has its own mask row
+            // (stride_m bytes apart). The previous one-row check was a regression that
+            // triggered identical garbage output for multiple slots of a second batch
+            // (SW recycle scenario), because row 0's head being -INF didn't imply that
+            // rows 1..neq1-1 had no valid cells in the cropped head.
+            bool head_has_valid = false;
+            for (int j = 0; j < neq1 && !head_has_valid; ++j) {
+                auto umask_j = (const uint16_t *)((const char *)mask + int64_t(j)*stride_m);
+                for (int i = 0; i < first; ++i) {
+                    if (umask_j[i] == 0) { head_has_valid = true; break; }
+                }
+            }
+            if (!head_has_valid) {
+                k = (const char *)k + int64_t(first)*stride_k;
+                v = (const char *)v + int64_t(first)*stride_v;
+                mask = (const uint16_t *)mask + first;
+                nek1 -= first;
+            }
         }
     }
 
@@ -383,11 +405,14 @@ extern "C" IQK_API bool iqk_flash_attn_noalibi(int type_q, int type_mask, float 
         int gcd = simple_gcd(nek2, nth);
         int nth_k  = nth/gcd;
         int nek2_k = nek2/gcd;
-        int nchunk = nek2_k*nek1/32;
+        // Use original (un-cropped) nek1 to compute nk so the chunking matches
+        // iqk_fa_work_buffer_size(). nkk (actual iterations) still uses cropped nek1,
+        // so we do *fewer* iterations than estimated — safe for work_buffer bounds.
+        int nchunk = nek2_k*original_nek1/32;
         int npt = (nchunk + nth_k - 1)/nth_k;
         int nk;
         if (npt*nth_k == nchunk) {
-            nk = 32 * (nek2*nek1/(32*nth));
+            nk = 32 * (nek2*original_nek1/(32*nth));
         } else {
             //int nm = std::max(1, npt/8);
             int nm = 1;

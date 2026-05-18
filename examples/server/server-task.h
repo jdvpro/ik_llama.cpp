@@ -179,6 +179,8 @@ struct server_task_result {
 
     bool                  verbose = false;
 
+    virtual ~server_task_result() = default;
+
     virtual bool is_error() {
         // only used by server_task_result_error
         return false;

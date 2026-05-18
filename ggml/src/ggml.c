@@ -22027,9 +22027,13 @@ static void ggml_compute_forward_flash_attn_ext_f16(
             S = S*ms + vs;
         }
 
-        // V /= S
-        const float S_inv = 1.0f/S;
-        ggml_vec_scale_f32(Dv, VKQ32, S_inv);
+        // V /= S  (guard against empty slots when -np > 1)
+        if (S > 0) {
+            const float S_inv = 1.0f/S;
+            ggml_vec_scale_f32(Dv, VKQ32, S_inv);
+        } else {
+            memset(VKQ32, 0, Dv*sizeof(float));
+        }
 
         // dst indices
         const int i1 = iq1;

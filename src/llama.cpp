@@ -557,6 +557,14 @@ struct llama_context::Prev {
     int per_step_max_allocated;
     llama_mtp_op_type mtp_op_type;
     ggml_cgraph * graph;
+    // For hybrid/recurrent architectures (qwen3next, mamba), the delta-net /
+    // SSM build path bakes a state-reset op (ggml_scale(state, 0)) into the
+    // compute graph when batch.pos[0] == 0. Reusing such a graph for a later
+    // chunk with pos[0] != 0 would re-execute the reset and wipe the
+    // recurrent state we just accumulated. Track whether the cached graph
+    // was built with pos[0] == 0 so we can refuse reuse when this flag
+    // differs from the current ubatch.
+    bool reset_pos0;
 };
 
 void llama_context::reset_scheduler() {
@@ -575,13 +583,32 @@ bool llama_context::can_reuse_graph(const llama_batch & u_batch) {
     if (u_batch.embd) return false;
     if (the_prev->save_per_step_ssm != kv_self.save_per_step_ssm ||
         the_prev->per_step_max_allocated != kv_self.ckpt.per_step_max_allocated) return false;
-    return u_batch.all_seq_id == the_prev->all_seq_id &&
-           kv_self.head > 0 &&
-           kv_self.n == the_prev->n_kv &&
-           n_outputs == the_prev->n_outputs &&
-           u_batch.n_tokens == the_prev->n_tokens &&
-           cparams.mtp_op_type == the_prev->mtp_op_type &&
-           update_cache_copies();
+    // With -np > 1, batch.all_seq_id stays at its default while the actual sequence
+    // is encoded in batch.seq_id[][]; comparing all_seq_id alone would let us reuse
+    // a graph built for a different slot.
+    const int seq_id = u_batch.seq_id ? u_batch.seq_id[0][0] : u_batch.all_seq_id;
+    if (!(seq_id == the_prev->all_seq_id &&
+          kv_self.head > 0 &&
+          kv_self.n == the_prev->n_kv &&
+          n_outputs == the_prev->n_outputs &&
+          u_batch.n_tokens == the_prev->n_tokens &&
+          cparams.mtp_op_type == the_prev->mtp_op_type)) {
+        return false;
+    }
+    // For hybrid (qwen3next) and recurrent (mamba) architectures the graph
+    // bakes a recurrent-state reset op when pos[0] == 0 at build time. If
+    // we reuse such a graph for a chunk with pos[0] != 0 (e.g. continuation
+    // of a prefill that was split into single-token chunks by the mixed-seq
+    // fallback), the baked reset re-zeros the recurrent state on every
+    // chunk and the prefill never accumulates. Refuse reuse when this flag
+    // changes.
+    if (llm_arch_is_hybrid(model.arch) || llm_arch_is_recurrent(model.arch)) {
+        const bool cur_reset_pos0 = u_batch.pos != nullptr && u_batch.pos[0] == 0;
+        if (cur_reset_pos0 != the_prev->reset_pos0) {
+            return false;
+        }
+    }
+    return update_cache_copies();
 }
 
 /*
@@ -4739,11 +4766,13 @@ static int llama_decode_internal(
             //if (u_batch.n_tokens == 1 && u_batch.embd == nullptr && lctx.cparams.graph_reuse) {
             if (u_batch.embd == nullptr && lctx.cparams.graph_reuse &&
                     !(lctx.model.arch == LLM_ARCH_GEMMA4_MTP && lctx.mtp_target_ctx != nullptr)) {
+                const int seq_id = u_batch.seq_id ? u_batch.seq_id[0][0] : (int)u_batch.all_seq_id;
+                const bool reset_pos0 = u_batch.pos != nullptr && u_batch.pos[0] == 0;
                 prev = std::make_unique<llama_context::Prev>(llama_context::Prev{
-                        (int)u_batch.all_seq_id, (int)lctx.n_outputs, (int)lctx.kv_self.n,
+                        seq_id, (int)lctx.n_outputs, (int)lctx.kv_self.n,
                         (int)u_batch.n_tokens,
                         lctx.kv_self.save_per_step_ssm, lctx.kv_self.ckpt.per_step_max_allocated,
-                        cparams.mtp_op_type, gf});
+                        cparams.mtp_op_type, gf, reset_pos0});
             }
         } else {
             //printf("Reusing graph with n_kv = %d, n_tokens = %d\n", (int)prev->n_kv, (int)prev->n_tokens);
