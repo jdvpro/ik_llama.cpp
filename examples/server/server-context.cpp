@@ -424,6 +424,11 @@ bool server_context::load_model(const gpt_params& params_) {
         if (params_base.speculative.type == COMMON_SPECULATIVE_TYPE_MTP) {
             params_base.speculative.type = COMMON_SPECULATIVE_TYPE_NONE;
         }
+        // -mtp expands into a resolved stage chain ({type=MTP}) during
+        // common_speculative_finalize_stages(); slot init then derives
+        // wants_mtp_stage from speculative.stages (not has_mtp), so MTP
+        // would still activate per-slot unless we clear stages here too.
+        params_base.speculative.stages.clear();
         params_base.speculative.model.clear();
         params_base.speculative.params.clear();
         params_base.speculative.model_dft = nullptr;
