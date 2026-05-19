@@ -466,6 +466,7 @@ class TensorNameMap:
         MODEL_TENSOR.SSM_CONV1D: (
             "model.layers.{bid}.conv1d",
             "backbone.layers.{bid}.mixer.conv1d",
+            "model.layers.{bid}.linear_attn.conv1d",  # qwen3next / qwen35moe
         ),
 
         MODEL_TENSOR.SSM_X: (
@@ -476,11 +477,13 @@ class TensorNameMap:
         MODEL_TENSOR.SSM_DT: (
             "model.layers.{bid}.dt_proj",
             "backbone.layers.{bid}.mixer.dt_proj",
+            "model.layers.{bid}.linear_attn.dt_proj",  # qwen3next / qwen35moe (rename of .dt_bias)
         ),
 
         MODEL_TENSOR.SSM_A: (
             "model.layers.{bid}.A_log",
             "backbone.layers.{bid}.mixer.A_log",
+            "model.layers.{bid}.linear_attn.A_log",  # qwen3next / qwen35moe
         ),
 
         MODEL_TENSOR.SSM_D: (
@@ -491,6 +494,28 @@ class TensorNameMap:
         MODEL_TENSOR.SSM_OUT: (
             "model.layers.{bid}.out_proj",
             "backbone.layers.{bid}.mixer.out_proj",
+            "model.layers.{bid}.linear_attn.out_proj",  # qwen3next / qwen35moe
+        ),
+
+        MODEL_TENSOR.SSM_NORM: (
+            "model.layers.{bid}.linear_attn.norm",  # qwen3next / qwen35moe
+            "backbone.layers.{bid}.mixer.norm",     # mamba2
+        ),
+
+        MODEL_TENSOR.SSM_BETA_ALPHA: (
+            "model.layers.{bid}.linear_attn.in_proj_ba",  # qwen3next (fused beta+alpha)
+        ),
+
+        MODEL_TENSOR.SSM_BETA: (
+            "model.layers.{bid}.linear_attn.in_proj_b",   # qwen35moe (separate beta)
+        ),
+
+        MODEL_TENSOR.SSM_ALPHA: (
+            "model.layers.{bid}.linear_attn.in_proj_a",   # qwen35moe (separate alpha)
+        ),
+
+        MODEL_TENSOR.ATTN_GATE: (
+            "model.layers.{bid}.linear_attn.in_proj_z",   # qwen35moe (z-gate as ATTN_GATE)
         ),
 
         MODEL_TENSOR.ATTN_Q_A: (

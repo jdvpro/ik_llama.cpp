@@ -660,6 +660,9 @@ class Model:
         if chkhsh == "f4f37b6c8eb9ea29b3eac6bb8c8487c5ab7885f8d8022e67edc1c68ce8403e95":
             # ref: https://huggingface.co/MiniMaxAI/MiniMax-M2
             res = "minimax-m2"
+        if chkhsh == "d30d75d9059f1aa2c19359de71047b3ae408c70875e8a3ccf8c5fba56c9d8af4":
+            # ref: Qwen3.5/3.6 MoE family (Qwen3-Next-80B, Qwen3.6-35B-A3B, ...)
+            res = "qwen35"
         if res is None:
             logger.warning("\n")
             logger.warning("**************************************************************************************")

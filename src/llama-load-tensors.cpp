@@ -1426,6 +1426,18 @@ bool create_tensors_helper::create_qwen3next_tensors(const LLM_TN & tn) {
         if (model.output == NULL) {
             model.output = create_tensor(ctx_output, tn(LLM_TENSOR_TOKEN_EMBD, "weight"), {n_embd, n_vocab}, llama_model_loader::TENSOR_DUPLICATED);
         }
+        // Optional separate output head for MTP (mirrors qwen35moe).
+        int flags = llama_model_loader::TENSOR_NOT_REQUIRED;
+        if (!model.mtp) flags |= llama_model_loader::TENSOR_SKIP;
+        auto output_mtp = create_tensor(ctx_output, "output_extra.weight", {n_embd, n_vocab}, flags);
+        if (model.mtp) {
+            model.output_mtp = output_mtp;
+            if (!model.output_mtp) {
+                model.output_mtp = model.output;
+            } else {
+                LLAMA_LOG_INFO("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX Using %s as MTP output\n", model.output_mtp->name);
+            }
+        }
     }
 
     const bool has_moe_hparams = n_expert > 0 && n_expert_used > 0;
@@ -1443,24 +1455,31 @@ bool create_tensors_helper::create_qwen3next_tensors(const LLM_TN & tn) {
     const int64_t ba_dim      = num_v_heads * 2;
 
     for (int i = 0; i < n_layer; ++i) {
+        const bool is_mtp_layer = hparams.nextn_predict_layers > 0 &&
+                                  static_cast<uint32_t>(i) >= hparams.n_layer - hparams.nextn_predict_layers;
+        int mtp_flags = 0;
+        if (!model.mtp && is_mtp_layer) {
+            mtp_flags |= llama_model_loader::TENSOR_SKIP;
+        }
+
         ggml_context * ctx_layer = ctx_for_layer(i);
         ggml_context * ctx_split = ctx_for_layer_split(i);
 
         auto & layer = model.layers[i];
 
-        layer.attn_norm      = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_NORM,      "weight", i), {n_embd});
-        layer.attn_post_norm = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_POST_NORM, "weight", i), {n_embd});
+        layer.attn_norm      = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_NORM,      "weight", i), {n_embd}, mtp_flags);
+        layer.attn_post_norm = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_POST_NORM, "weight", i), {n_embd}, mtp_flags);
         layer.ffn_norm = layer.attn_post_norm;
 
         if (!hparams.is_recurrent(i)) {
             // Full-attention layer
-            layer.wq = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_Q,   "weight", i), {n_embd, n_embd_head_k * n_head * 2});
-            layer.wk = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_K,   "weight", i), {n_embd, n_embd_k_gqa});
-            layer.wv = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_V,   "weight", i), {n_embd, n_embd_v_gqa});
-            layer.wo = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_OUT, "weight", i), {n_embd_head_k * n_head, n_embd});
+            layer.wq = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_Q,   "weight", i), {n_embd, n_embd_head_k * n_head * 2}, mtp_flags);
+            layer.wk = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_K,   "weight", i), {n_embd, n_embd_k_gqa}, mtp_flags);
+            layer.wv = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_V,   "weight", i), {n_embd, n_embd_v_gqa}, mtp_flags);
+            layer.wo = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_OUT, "weight", i), {n_embd_head_k * n_head, n_embd}, mtp_flags);
 
-            layer.attn_q_norm = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_Q_NORM, "weight", i), {n_embd_head_k});
-            layer.attn_k_norm = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_K_NORM, "weight", i), {n_embd_head_k});
+            layer.attn_q_norm = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_Q_NORM, "weight", i), {n_embd_head_k}, mtp_flags);
+            layer.attn_k_norm = create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_K_NORM, "weight", i), {n_embd_head_k}, mtp_flags);
         } else {
             // Recurrent linear-attention layer
             layer.ssm_in         = create_tensor(ctx_layer, tn(LLM_TENSOR_SSM_IN,         "weight", i), {n_embd, qkvz_dim},
@@ -1480,29 +1499,57 @@ bool create_tensors_helper::create_qwen3next_tensors(const LLM_TN & tn) {
         auto ffn_ctx = ctx_split; //model.split_mode == LLAMA_SPLIT_MODE_GRAPH ? ctx_split : ctx_layer;
 
         // Dense FFN path (optional, e.g. mlp_only_layers)
-        layer.ffn_gate = create_tensor(ffn_ctx, tn(LLM_TENSOR_FFN_GATE, "weight", i), {n_embd, n_ff}, llama_model_loader::TENSOR_NOT_REQUIRED);
-        layer.ffn_up   = create_tensor(ffn_ctx, tn(LLM_TENSOR_FFN_UP,   "weight", i), {n_embd, n_ff}, llama_model_loader::TENSOR_NOT_REQUIRED);
-        layer.ffn_down = create_tensor(ffn_ctx, tn(LLM_TENSOR_FFN_DOWN, "weight", i), {  n_ff, n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
+        layer.ffn_gate = create_tensor(ffn_ctx, tn(LLM_TENSOR_FFN_GATE, "weight", i), {n_embd, n_ff}, mtp_flags | llama_model_loader::TENSOR_NOT_REQUIRED);
+        layer.ffn_up   = create_tensor(ffn_ctx, tn(LLM_TENSOR_FFN_UP,   "weight", i), {n_embd, n_ff}, mtp_flags | llama_model_loader::TENSOR_NOT_REQUIRED);
+        layer.ffn_down = create_tensor(ffn_ctx, tn(LLM_TENSOR_FFN_DOWN, "weight", i), {  n_ff, n_embd}, mtp_flags | llama_model_loader::TENSOR_NOT_REQUIRED);
 
-        // MoE path (optional per-layer)
+        // MoE path (optional per-layer). NB: with mtp_flags=TENSOR_SKIP the
+        // returned pointer is nullptr even when the tensor is present in the
+        // file, so we must probe the file directly to decide whether to
+        // create the dependent expert tensors (otherwise n_created falls
+        // behind n_tensors and done_getting_tensors() throws).
         layer.ffn_gate_inp = nullptr;
-        if (n_expert > 0) {
-            layer.ffn_gate_inp = create_tensor(ffn_ctx, tn(LLM_TENSOR_FFN_GATE_INP, "weight", i), {n_embd, n_expert}, llama_model_loader::TENSOR_NOT_REQUIRED);
-        }
-
-        if (layer.ffn_gate_inp != nullptr) {
+        const bool has_moe = n_expert > 0 &&
+            ml.get_tensor_meta(tn(LLM_TENSOR_FFN_GATE_INP, "weight", i).c_str()) != nullptr;
+        if (has_moe) {
+            layer.ffn_gate_inp = create_tensor(ffn_ctx, tn(LLM_TENSOR_FFN_GATE_INP, "weight", i), {n_embd, n_expert}, mtp_flags | llama_model_loader::TENSOR_NOT_REQUIRED);
             if (n_expert_used == 0) {
                 throw std::runtime_error("n_expert_used must be > 0 when QWEN3NEXT MoE tensors are present");
             }
-            use_mmap_buffer &= !create_std_ffn_exps(n_embd, tn, i, 0, n_ff_exp);
+            use_mmap_buffer &= !create_std_ffn_exps(n_embd, tn, i, mtp_flags, n_ff_exp);
         }
 
-        // Shared expert path (optional per-layer)
-        layer.ffn_gate_inp_shexp = create_tensor(ctx_split, tn(LLM_TENSOR_FFN_GATE_INP_SHEXP, "weight", i), {n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
-        if (layer.ffn_gate_inp_shexp != nullptr) {
-            layer.ffn_gate_shexp = create_tensor(ctx_split, tn(LLM_TENSOR_FFN_GATE_SHEXP, "weight", i), {n_embd, n_ff_shexp}, llama_model_loader::TENSOR_NOT_REQUIRED);
-            layer.ffn_up_shexp   = create_tensor(ctx_split, tn(LLM_TENSOR_FFN_UP_SHEXP,   "weight", i), {n_embd, n_ff_shexp}, llama_model_loader::TENSOR_NOT_REQUIRED);
-            layer.ffn_down_shexp = create_tensor(ctx_split, tn(LLM_TENSOR_FFN_DOWN_SHEXP, "weight", i), {n_ff_shexp, n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
+        // Shared expert path (optional per-layer). Same gating concern as
+        // above: probe the file rather than the (possibly SKIP-nullified)
+        // pointer.
+        const bool has_shexp =
+            ml.get_tensor_meta(tn(LLM_TENSOR_FFN_GATE_INP_SHEXP, "weight", i).c_str()) != nullptr;
+        layer.ffn_gate_inp_shexp = nullptr;
+        if (has_shexp) {
+            layer.ffn_gate_inp_shexp = create_tensor(ctx_split, tn(LLM_TENSOR_FFN_GATE_INP_SHEXP, "weight", i), {n_embd}, mtp_flags | llama_model_loader::TENSOR_NOT_REQUIRED);
+            layer.ffn_gate_shexp     = create_tensor(ctx_split, tn(LLM_TENSOR_FFN_GATE_SHEXP, "weight", i), {n_embd, n_ff_shexp}, mtp_flags | llama_model_loader::TENSOR_NOT_REQUIRED);
+            layer.ffn_up_shexp       = create_tensor(ctx_split, tn(LLM_TENSOR_FFN_UP_SHEXP,   "weight", i), {n_embd, n_ff_shexp}, mtp_flags | llama_model_loader::TENSOR_NOT_REQUIRED);
+            layer.ffn_down_shexp     = create_tensor(ctx_split, tn(LLM_TENSOR_FFN_DOWN_SHEXP, "weight", i), {n_ff_shexp, n_embd}, mtp_flags | llama_model_loader::TENSOR_NOT_REQUIRED);
+        }
+
+        // NEXTN/MTP head tensors (only on MTP layers).
+        if (is_mtp_layer) {
+            layer.nextn.eh_proj          = create_tensor(ctx_split,
+                    tn(LLM_TENSOR_NEXTN_EH_PROJ, "weight", i),
+                    { 2 * n_embd, n_embd },
+                    mtp_flags | llama_model_loader::TENSOR_NOT_REQUIRED);
+            layer.nextn.enorm            = create_tensor(ctx_split,
+                    tn(LLM_TENSOR_NEXTN_ENORM, "weight", i),
+                    { n_embd },
+                    mtp_flags);
+            layer.nextn.hnorm            = create_tensor(ctx_split,
+                    tn(LLM_TENSOR_NEXTN_HNORM, "weight", i),
+                    { n_embd },
+                    mtp_flags);
+            layer.nextn.shared_head_norm = create_tensor(ctx_split,
+                    tn(LLM_TENSOR_NEXTN_SHARED_HEAD_NORM, "weight", i),
+                    { n_embd },
+                    mtp_flags | llama_model_loader::TENSOR_NOT_REQUIRED);
         }
     }
 
