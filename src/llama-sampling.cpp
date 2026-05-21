@@ -1246,6 +1246,14 @@ struct llama_sampler_adaptive_p * llama_init_adaptive_p_impl(int n_vocab,
     return result;
 }
 
+void llama_free_adaptive_p_impl(struct llama_sampler_adaptive_p * adapt_p_ctx) {
+    delete adapt_p_ctx;
+}
+
+struct llama_sampler_adaptive_p * llama_clone_adaptive_p_impl(struct llama_sampler_adaptive_p * adapt_p_ctx) {
+    return adapt_p_ctx ? new llama_sampler_adaptive_p(*adapt_p_ctx) : nullptr;
+}
+
 // grammar
 
 struct llama_sampler_grammar {

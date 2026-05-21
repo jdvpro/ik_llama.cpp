@@ -90,6 +90,10 @@ struct llama_sampler_adaptive_p * llama_init_adaptive_p_impl(int n_vocab,
         const bool updt_w_cur,
     const uint32_t seed);
 
+void llama_free_adaptive_p_impl(struct llama_sampler_adaptive_p * adapt_p_ctx);
+
+struct llama_sampler_adaptive_p * llama_clone_adaptive_p_impl(struct llama_sampler_adaptive_p * adapt_p_ctx);
+
 void llama_prep_adaptive_p_impl(
               struct llama_sampling * smpl,
              llama_token_data_array * candidates,
@@ -124,5 +128,4 @@ llama_token llama_sample_token_greedy_impl     (struct llama_sampling * smpl, ll
 llama_token llama_sample_token_with_rng_impl   (struct llama_sampling * smpl, llama_token_data_array * candidates, std::mt19937 & rng);
 llama_token llama_sample_token_impl            (struct llama_sampling * smpl, llama_token_data_array * candidates);
 llama_token llama_sample_token_adaptive_p_impl (struct llama_sampling * smpl, llama_token_data_array * candidates, struct llama_sampler_adaptive_p * adapt_p_ctx);
-
 

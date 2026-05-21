@@ -178,6 +178,8 @@ void common_sampler_free(struct common_sampler * ctx) {
     }
     if (ctx->smpl)
         llama_sampler_dry_free(ctx->smpl);
+    if (ctx->adapt_p_ctx)
+        llama_free_adaptive_p(ctx->adapt_p_ctx);
     if (ctx->rbudget)
         common_reasoning_budget_free(ctx->rbudget);
     delete ctx;
@@ -246,6 +248,14 @@ void common_sampler_clone(common_sampler * src, common_sampler * dst) {
     }
     if (src->smpl) {
         dst->smpl = llama_sampler_dry_clone(src->smpl);
+    }
+
+    if (dst->adapt_p_ctx) {
+        llama_free_adaptive_p(dst->adapt_p_ctx);
+        dst->adapt_p_ctx = nullptr;
+    }
+    if (src->adapt_p_ctx) {
+        dst->adapt_p_ctx = llama_clone_adaptive_p(src->adapt_p_ctx);
     }
 
     if (dst->rbudget) {

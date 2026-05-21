@@ -10100,6 +10100,14 @@ struct llama_sampler_adaptive_p * llama_init_adaptive_p(int n_vocab, const float
     return llama_init_adaptive_p_impl(n_vocab, target, decay, updt_w_cur, seed);
 }
 
+void llama_free_adaptive_p(struct llama_sampler_adaptive_p * adapt_p_ctx) {
+    llama_free_adaptive_p_impl(adapt_p_ctx);
+}
+
+struct llama_sampler_adaptive_p * llama_clone_adaptive_p(struct llama_sampler_adaptive_p * adapt_p_ctx) {
+    return llama_clone_adaptive_p_impl(adapt_p_ctx);
+}
+
 void llama_review_adaptive_p(struct llama_sampler_adaptive_p * adapt_p_ctx, const size_t n_unsent, const bool rewind_status) {
     llama_review_adaptive_p_impl(adapt_p_ctx, n_unsent, rewind_status);
 }
