@@ -695,7 +695,9 @@ ggml_cgraph * llm_build_context::build_qwen4exp() {
                 nextn.hc_head_norm, nextn.hc_head_down, nextn.hc_head_up,
                 nullptr, nullptr, n_embd, -1, cb);
 
-        cur = llm_build_lora_mm(lctx, ctx0, model.output, cur);
+        // -mtprot: the draft head may use a requantized copy of the output matrix
+        ggml_tensor * output = model.output_mtp ? model.output_mtp : model.output;
+        cur = llm_build_lora_mm(lctx, ctx0, output, cur);
         cb(cur, "result_output", -1);
         ggml_build_forward_expand(gf, cur);
         return gf;

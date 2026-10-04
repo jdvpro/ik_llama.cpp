@@ -291,5 +291,23 @@ bool llama_model_share_qwen4exp_mtp_tensors(llama_model * draft_model, const lla
         draft_model->output = output;
     }
 
+    // -mtprot on the target: the draft head uses the target's requantized output copy
+    if (draft_model->output_mtp == nullptr && target_model->output_mtp != nullptr &&
+            target_model->output_mtp != target_model->output) {
+        ggml_tensor * output_mtp = target_model->output_mtp;
+        if (output_mtp->ne[0] != n_embd || output_mtp->ne[1] != n_vocab) {
+            return false;
+        }
+        if (llama_model_qwen4exp_io_needs_clone(output_mtp, draft_model->buft_output.buft)) {
+            output_mtp = llama_model_clone_qwen4exp_io_tensor(
+                    draft_model, output_mtp, draft_model->buft_output.buft,
+                    draft_model->qwen4exp_output_mtp_ptr, "qwen4exp_output_mtp");
+            if (output_mtp == nullptr) {
+                return false;
+            }
+        }
+        draft_model->output_mtp = output_mtp;
+    }
+
     return draft_model->tok_embd != nullptr && draft_model->output != nullptr;
 }
